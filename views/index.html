@@ -1,0 +1,124 @@
+<html>
+    <head>
+        <script type='text/javascript' src='http://code.jquery.com/jquery-2.1.1.min.js'></script>
+        <script type='text/javascript' src='http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore-min.js'></script>
+        <script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.13/angular.min.js'></script>
+        <script type='text/javascript' src='/public/app.js'></script>
+        <style type='text/css'>
+            body {
+                margin: 0;
+                padding: 0;
+                color: #e0e0e0;
+                font-family: monospace;
+                font-weight: 300;
+            }
+
+            .pane {
+                position: absolute;
+                width: 50%;
+                height: 50%;
+                background-image: -webkit-linear-gradient(45deg, #222, #444);
+            }
+
+            .pane.n {
+                top: 0;
+            }
+
+            .pane.s {
+                bottom: 0;
+            }
+
+            .pane.e {
+                right: 0;
+            }
+
+            .pane.w {
+                left: 0;
+            }
+
+            projection {
+                position: absolute;
+                height: 100%;
+                width: 100%;
+            }
+
+            #controls {
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                width: 20%;
+
+                background-color: #181818;
+                overflow-y: scroll;
+            }
+
+            #controls table {
+                width: 100%;
+                font-weight: 300;
+            }
+
+            #controls hr {
+                border: none;
+                height: 1px;
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+            #quadview {
+                position: absolute;
+                top: 0;
+                right: 0;
+                height: 100%;
+                width: 80%;
+            }
+        </style>
+    </head>
+    <body ng-app='mdlr'>
+        <div id='controls' ng-controller='ControlsController'>
+            <h3>Model info</h3>
+            <table>
+                <tr>
+                    <td>Vertices</td>
+                    <td>{{ model.numVerts }}</td>
+                </tr>
+                <tr>
+                    <td>Faces</td>
+                    <td>{{ model.numTris }}</td>
+                </tr>
+                <tr>
+                    <td>Frames</td>
+                    <td>{{ model.numFrames }}</td>
+                </tr>
+                <tr>
+                    <td>Skins</td>
+                    <td>{{ model.numSkins }}</td>
+                </tr>
+            </table>
+            <hr/>
+
+            <h3>Animation</h3>
+            <input type='range'
+                min='0' max='{{ model.numFrames - 1 }}'
+                ng-model='$root.frame' ng-change='stop()' />
+            <button ng-if='!playing' ng-click='play()'>play</button>
+            <button ng-if='playing' ng-click='stop()'>stop</button>
+            {{ model.frames[frame].simpleFrame.name }}
+            <hr/>
+
+            <h3>Skin</h3>
+            View skin...
+            <hr/>
+
+        </div><div id='quadview' ng-controller='QuadViewController'>
+            <linear-projection class='pane n w' model='model' frame='frame' projection-matrix='[[4, 0, 0, 0],[0, 0, -4, 800]]'></linear-projection>
+            <linear-projection class='pane n e' model='model' frame='frame' projection-matrix='[[0, 4, 0, 0],[0, 0, -4, 800]]'></linear-projection>
+            <linear-projection class='pane s w' model='model' frame='frame' projection-matrix='[[4, 0, 0, 0],[0, -4, 0, 800]]'></linear-projection>
+            <perspective-projection class='pane s e' model='model' frame='frame'
+                cam-pos='[0, -100, 0]' cam-dir='[0, 1, 0]'>
+            </perspective-projection>
+            <input style='width: 100%; position: absolute;' type='range' min='-500' max='0' ng-model='camy' />
+            <input style='width: 100%; top: 2em; position: absolute;' type='range' min='-500' max='0' ng-model='camz' />
+            <input style='width: 100%; top: 4em; position: absolute;' type='range' min='-500' max='0' ng-model='camx' />
+        </div>
+    </body>
+</html>
