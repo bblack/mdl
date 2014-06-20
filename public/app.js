@@ -190,25 +190,12 @@ m.directive('perspectiveProjection', function(Vec3){
                 // transform from world space to camera space
                 p = Vec3.prototype.applyAffineTransform.call(p, worldToCameraMatrix);
 
-                var camy = worldToCameraMatrix[1].slice(0,3); // TODO normalize
-                var pyNorm = p.dot(camy);
-                var py = Vec3.prototype.timesScalar.call(camy, pyNorm);
-                var pxz = p.minus(py);
-                var camx = worldToCameraMatrix[0].slice(0,3); // TODO normalize
-                var pxNorm = pxz.dot(camx);
-                var px = Vec3.prototype.timesScalar.call(camx, pxNorm);
-                var pz = pxz.minus(px);
-                var pzNorm = pz.norm();
-
-                // var projectedPoint = [
-                //     (Math.atan(p.x / p.y)) / (Math.PI/4) * $scope.w/2 + $scope.w/2,
-                //     (Math.atan(-p.z / p.y)) / (Math.PI/4) * $scope.h/2 + $scope.h/2
-                // ]
-
                 var projectedPoint = [
-                    (Math.atan(pxNorm / pyNorm)) / (Math.PI/4) * $scope.w/2 + $scope.w/2,
-                     ( (Math.atan(pzNorm / pyNorm)) / (Math.PI/4) * $scope.h/2 + $scope.h/2 )
-                ]
+                    ((p.x / p.y)) / (Math.PI/4) * $scope.w/2 + $scope.w/2,
+                    ((p.z / p.y)) / (Math.PI/4) * $scope.h/2 + $scope.h/2
+                ];
+
+
 
                 return projectedPoint;
             }
