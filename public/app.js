@@ -27,6 +27,27 @@ m.controller('QuadViewController', function($scope, $rootScope, $http){
     $scope.camPos = [0, -200, -100];
 });
 
+m.service('MdlNorms', function($http, Vec3){
+    var norms = []
+
+    $http.get('/public/anorms.h').then(function(res){
+        lines = res.data.split('\n');
+        for (var i=0; i<lines.length; i++) {
+            var pattern = /^\{\s*(.*)f,\s*(.*)f,\s*(.*)f\s*\}\s*,\s*$/
+            var match = lines[i].match(pattern);
+            if (match) {
+                norms.push(new Vec3(
+                    parseFloat(match[1]),
+                    parseFloat(match[2]),
+                    parseFloat(match[3])
+                ));
+            }
+        }
+    });
+
+    return norms;
+});
+
 m.service('Vec3', function(){
     var Vec3 = function(x, y, z){
         this.x = x;
@@ -75,14 +96,30 @@ m.service('Vec3', function(){
             Math.pow(this.z, 2));
     }
 
+    Vec3.prototype.normalized = function(){
+        var norm = this.norm();
+        return this.timesScalar(1 / norm);
+    }
+
+    Vec3.prototype.cross = function(v){
+        return new Vec3(
+            this.y*v.z - this.z*v.y,
+            this.z*v.x - this.x*v.z,
+            this.x*v.y - this.y*v.x
+        );
+    };
+
     return Vec3;
 });
 
-m.directive('projection', function(){
+m.directive('projection', function(Vec3){
     return {
         restrict: 'E',
         template: "<canvas style='width: 100%; height: 100%;'></canvas>",
         link: function($scope, $element){
+            $scope.fill = true;
+            var lightDir = new Vec3(0, 0, -1).normalized(); // top down
+
             var canvas = $element.find('canvas')[0];
 
             var draw = function(){
@@ -94,16 +131,31 @@ m.directive('projection', function(){
                 ctx.clearRect(0, 0, $scope.w, $scope.h);
                 ctx.lineWidth = .5;
                 ctx.strokeStyle = '#e0e0e0';
+                ctx.fillStyle = '#e0e0e0';
 
+                // TODO _ determine order of triangles, based on the camera
                 model.triangles.forEach(function(tri, triIndex){
+                    var verts = [];
+
                     ctx.beginPath();
                     for (var i = 0; i < 3; i++) {
                         var vertIndex = tri.vertIndeces[i];
                         var vert = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                        verts.push(new Vec3(vert.x, vert.y, vert.z));
                         ctx[i == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vert));
                     }
-                    ctx.closePath()
-                    ctx.stroke(); // or fill()
+                    ctx.closePath();
+
+                    if ($scope.fill) {
+                        var surfaceNormal = verts[1].minus(verts[0])
+                            .cross(verts[2].minus(verts[0]))
+                            .normalized();
+                        var light = surfaceNormal.dot(lightDir) * 0.5 + 0.5; // 0 to 1
+                        ctx.fillStyle = 'hsl(0, 0%, ' + (Math.floor(light*100)) + '%)';
+                        ctx.fill();
+                    } else {
+                        ctx.stroke();
+                    }
                 });
             };
 
@@ -153,7 +205,7 @@ m.directive('linearProjection', function(){
     };
 });
 
-m.directive('perspectiveProjection', function(Vec3, $interval){
+m.directive('perspectiveProjection', function(Vec3, $interval, MdlNorms){
     return {
         restrict: 'E',
         scope: {
