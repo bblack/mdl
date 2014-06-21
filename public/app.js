@@ -100,15 +100,11 @@ m.directive('projection', function(){
 
                     model.triangles.forEach(function(tri, triIndex){
                         ctx.beginPath();
-                        [0,1,2].forEach(function(cornerIndex){
-                            var vertIndex = tri.vertIndeces[cornerIndex];
-                            var vertIndexB = tri.vertIndeces[(cornerIndex + 1) % 3]
-
-                            var vertA = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
-                            var vertB = model.frames[$scope.frame].simpleFrame.verts[vertIndexB];
-
-                            ctx[cornerIndex == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vertA));
-                        });
+                        for (var i = 0; i < 3; i++) {
+                            var vertIndex = tri.vertIndeces[i];
+                            var vert = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                            ctx[i == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vert));
+                        }
                         ctx.closePath()
                         ctx.stroke(); // or fill()
                     });
