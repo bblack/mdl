@@ -1,3 +1,5 @@
+var TARGET_FPS = 60;
+
 m = angular.module('mdlr', []);
 
 m.controller('ControlsController', function($scope, $interval, $rootScope){
@@ -163,7 +165,7 @@ m.directive('perspectiveProjection', function(Vec3, $interval){
             frame: '=',
             camPos: '=',
             camDir: '=',
-            redraw: '='
+            redraw: '&'
         },
         template: '<projection></projection>',
         link: function($scope, $element) {
@@ -177,10 +179,9 @@ m.directive('perspectiveProjection', function(Vec3, $interval){
                 [0, 1, 0, -400],
                 [0, 0, 1, -250]
             ];
-
             var rotateObjectMatrix;
-
             var thetaObjectZ = 0;
+            var fov = Math.PI/2;
 
             $interval(function(){
                 thetaObjectZ += 0.01;
@@ -198,7 +199,7 @@ m.directive('perspectiveProjection', function(Vec3, $interval){
                 ];
 
                 $scope.redraw();
-            }, 16);
+            }, 1000/TARGET_FPS);
 
             $scope.$watchCollection('camPos', function(cam){
                 if (!cam) return;
@@ -209,19 +210,26 @@ m.directive('perspectiveProjection', function(Vec3, $interval){
             })
 
             $scope.project = function(p) {
-                // transform from world space to camera space
                 p = Vec3.prototype.applyAffineTransform.call(p, centerObject);
                 p = Vec3.prototype.applyAffineTransform.call(p, rotateObjectMatrix);
                 p = Vec3.prototype.applyAffineTransform.call(p, worldToCameraMatrix);
 
-                var projectedPoint = [
-                    ((p.x / p.y)) / (Math.PI/4) * $scope.w/2 + $scope.w/2,
-                    ((p.z / p.y)) / (Math.PI/4) * $scope.h/2 + $scope.h/2
+                // project into 2d
+                var fovX, fovY;
+                if ($scope.w > $scope.h) {
+                    fovX = ($scope.w/$scope.h) * fov;
+                    fovY = fov
+                } else {
+                    fovX = fov;
+                    fovY = ($scope.h/$scope.w) * fov;
+                }
+
+                p = [
+                    (p.x / p.y) / fovX * $scope.w + $scope.w/2,
+                    (p.z / p.y) / fovY * $scope.h + $scope.h/2
                 ];
 
-
-
-                return projectedPoint;
+                return p;
             }
 
         }
