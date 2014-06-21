@@ -83,37 +83,37 @@ m.directive('projection', function(){
         restrict: 'E',
         template: "<canvas style='width: 100%; height: 100%;'></canvas>",
         link: function($scope, $element){
-            var redraw = $scope.redraw = function(){
-                window.requestAnimationFrame(function(){
-                    if (!$scope.model) { return; }
+            var canvas = $element.find('canvas')[0];
 
-                    var model = $scope.model;
-                    var canvas = $element.find('canvas')[0];
-                    var ctx = canvas.getContext('2d');
-                    ctx.canvas.width = $scope.w;
-                    ctx.canvas.height = $scope.h;
+            var draw = function(){
+                if (!$scope.model) { return; }
 
-                    ctx.clearRect(0, 0, $scope.w, $scope.h);
+                var model = $scope.model;
+                var ctx = canvas.getContext('2d');
 
-                    ctx.lineWidth = .5;
-                    ctx.strokeStyle = '#e0e0e0';
+                ctx.clearRect(0, 0, $scope.w, $scope.h);
+                ctx.lineWidth = .5;
+                ctx.strokeStyle = '#e0e0e0';
 
-                    model.triangles.forEach(function(tri, triIndex){
-                        ctx.beginPath();
-                        for (var i = 0; i < 3; i++) {
-                            var vertIndex = tri.vertIndeces[i];
-                            var vert = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
-                            ctx[i == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vert));
-                        }
-                        ctx.closePath()
-                        ctx.stroke(); // or fill()
-                    });
+                model.triangles.forEach(function(tri, triIndex){
+                    ctx.beginPath();
+                    for (var i = 0; i < 3; i++) {
+                        var vertIndex = tri.vertIndeces[i];
+                        var vert = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                        ctx[i == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vert));
+                    }
+                    ctx.closePath()
+                    ctx.stroke(); // or fill()
                 });
             };
 
+            var redraw = $scope.redraw = function(){
+                window.requestAnimationFrame(draw);
+            };
+
             var invalidateSize = function(){
-                $scope.w = $element.width() * window.devicePixelRatio;
-                $scope.h = $element.height() * window.devicePixelRatio;
+                canvas.width = $scope.w = $element.width() * window.devicePixelRatio;
+                canvas.height = $scope.h = $element.height() * window.devicePixelRatio;
                 redraw();
             };
 
