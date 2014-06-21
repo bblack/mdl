@@ -113,12 +113,9 @@
             <linear-projection class='pane n w' model='model' frame='frame' projection-matrix='[[4, 0, 0, 0],[0, 0, -4, 800]]'></linear-projection>
             <linear-projection class='pane n e' model='model' frame='frame' projection-matrix='[[0, 4, 0, 0],[0, 0, -4, 800]]'></linear-projection>
             <linear-projection class='pane s w' model='model' frame='frame' projection-matrix='[[4, 0, 0, 0],[0, -4, 0, 800]]'></linear-projection>
-            <perspective-projection class='pane s e' model='model' frame='frame'
-                cam-pos='[0, -100, 0]' cam-dir='[0, 1, 0]'>
+            <perspective-projection class='pane s e'
+                model='model' frame='frame' cam-pos='camPos' cam-dir='[0, 0, 0]' redraw='redraw'>
             </perspective-projection>
-            <input style='width: 100%; position: absolute;' type='range' min='-500' max='0' ng-model='camy' />
-            <input style='width: 100%; top: 2em; position: absolute;' type='range' min='-500' max='0' ng-model='camz' />
-            <input style='width: 100%; top: 4em; position: absolute;' type='range' min='-500' max='0' ng-model='camx' />
         </div>
     </body>
 </html>

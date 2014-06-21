@@ -22,9 +22,7 @@ m.controller('QuadViewController', function($scope, $rootScope, $http){
         $rootScope.frame = 0;
     });
 
-    $scope.$watchGroup(['camx', 'camy', 'camz'], function(newVal){
-        $scope.$broadcast('redraw', newVal)
-    })
+    $scope.camPos = [0, -200, -100];
 });
 
 m.service('Vec3', function(){
@@ -54,7 +52,7 @@ m.service('Vec3', function(){
         var x = this.x, y = this.y, z = this.z;
         // this is a column vector
         return new Vec3(
-            x*m[0][0] + y*m[0][1] + z*m[0][1] + m[0][3],
+            x*m[0][0] + y*m[0][1] + z*m[0][2] + m[0][3],
             x*m[1][0] + y*m[1][1] + z*m[1][2] + m[1][3],
             x*m[2][0] + y*m[2][1] + z*m[2][2] + m[2][3]
         );
@@ -83,34 +81,36 @@ m.directive('projection', function(){
         restrict: 'E',
         template: "<canvas style='width: 100%; height: 100%;'></canvas>",
         link: function($scope, $element){
-            var redraw = function(){
-                if (!$scope.model) { return; }
+            var redraw = $scope.redraw = function(){
+                window.requestAnimationFrame(function(){
+                    if (!$scope.model) { return; }
 
-                var model = $scope.model;
-                var canvas = $element.find('canvas')[0];
-                var ctx = canvas.getContext('2d');
-                ctx.canvas.width = $scope.w;
-                ctx.canvas.height = $scope.h;
+                    var model = $scope.model;
+                    var canvas = $element.find('canvas')[0];
+                    var ctx = canvas.getContext('2d');
+                    ctx.canvas.width = $scope.w;
+                    ctx.canvas.height = $scope.h;
 
-                ctx.clearRect(0, 0, $scope.w, $scope.h);
+                    ctx.clearRect(0, 0, $scope.w, $scope.h);
 
-                ctx.lineWidth = .5;
-                ctx.strokeStyle = '#e0e0e0';
+                    ctx.lineWidth = .5;
+                    ctx.strokeStyle = '#e0e0e0';
 
-                model.triangles.forEach(function(tri, triIndex){
-                    [0,1,2].forEach(function(cornerIndex){
-                        var vertIndex = tri.vertIndeces[cornerIndex];
-                        var vertIndexB = tri.vertIndeces[(cornerIndex + 1) % 3]
+                    model.triangles.forEach(function(tri, triIndex){
+                        [0,1,2].forEach(function(cornerIndex){
+                            var vertIndex = tri.vertIndeces[cornerIndex];
+                            var vertIndexB = tri.vertIndeces[(cornerIndex + 1) % 3]
 
-                        var vertA = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
-                        var vertB = model.frames[$scope.frame].simpleFrame.verts[vertIndexB];
+                            var vertA = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                            var vertB = model.frames[$scope.frame].simpleFrame.verts[vertIndexB];
 
-                        ctx.moveTo.apply(ctx, $scope.project(vertA));
-                        ctx.lineTo.apply(ctx, $scope.project(vertB));
+                            ctx.moveTo.apply(ctx, $scope.project(vertA));
+                            ctx.lineTo.apply(ctx, $scope.project(vertB));
+                        });
                     });
-                });
 
-                ctx.stroke();
+                    ctx.stroke();
+                });
             };
 
             var invalidateSize = function(){
@@ -121,15 +121,11 @@ m.directive('projection', function(){
 
             invalidateSize();
 
-            $scope.$watchGroup(['model', 'frame'], function(){
-                redraw();
-            });
-
             $(window).resize(function(){
                 invalidateSize();
             });
 
-            $scope.$on('redraw', function(){
+            $scope.$watchGroup(['model', 'frame'], function(){
                 redraw();
             });
         }
@@ -159,35 +155,63 @@ m.directive('linearProjection', function(){
     };
 });
 
-m.directive('perspectiveProjection', function(Vec3){
+m.directive('perspectiveProjection', function(Vec3, $interval){
     return {
         restrict: 'E',
         scope: {
             model: '=',
             frame: '=',
             camPos: '=',
-            camDir: '='
+            camDir: '=',
+            redraw: '='
         },
         template: '<projection></projection>',
         link: function($scope, $element) {
+            var centerObject = [
+                [1, 0, 0, -150],
+                [0, 1, 0, -150],
+                [0, 0, 1, 0]
+            ];
             var worldToCameraMatrix = [
                 [1, 0, 0, -150],
                 [0, 1, 0, -400],
                 [0, 0, 1, -250]
             ];
 
-            $scope.$on('redraw', function(evt, cam){
+            var rotateObjectMatrix;
+
+            var thetaObjectZ = 0;
+
+            $interval(function(){
+                thetaObjectZ += 0.01;
+
+                var th = thetaObjectZ;
+
+                while (th > Math.PI * 2) {
+                    th -= (Math.PI * 2);
+                }
+
+                rotateObjectMatrix = [
+                    [Math.cos(th), Math.sin(th), 0, 0],
+                    [-Math.sin(th), Math.cos(th), 0, 0],
+                    [0, 0, 1, 0]
+                ];
+
+                $scope.redraw();
+            }, 16);
+
+            $scope.$watchCollection('camPos', function(cam){
+                if (!cam) return;
                 worldToCameraMatrix[0][3] = parseInt(cam[0]);
                 worldToCameraMatrix[1][3] = parseInt(cam[1]);
                 worldToCameraMatrix[2][3] = parseInt(cam[2]);
-            })
-
-            $scope.$watchGroup(['camPos', 'camDir'], function(){
-                // update worldToCameraMatrix
+                $scope.redraw();
             })
 
             $scope.project = function(p) {
                 // transform from world space to camera space
+                p = Vec3.prototype.applyAffineTransform.call(p, centerObject);
+                p = Vec3.prototype.applyAffineTransform.call(p, rotateObjectMatrix);
                 p = Vec3.prototype.applyAffineTransform.call(p, worldToCameraMatrix);
 
                 var projectedPoint = [
