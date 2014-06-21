@@ -99,6 +99,7 @@ m.directive('projection', function(){
                     ctx.strokeStyle = '#e0e0e0';
 
                     model.triangles.forEach(function(tri, triIndex){
+                        ctx.beginPath();
                         [0,1,2].forEach(function(cornerIndex){
                             var vertIndex = tri.vertIndeces[cornerIndex];
                             var vertIndexB = tri.vertIndeces[(cornerIndex + 1) % 3]
@@ -106,12 +107,11 @@ m.directive('projection', function(){
                             var vertA = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
                             var vertB = model.frames[$scope.frame].simpleFrame.verts[vertIndexB];
 
-                            ctx.moveTo.apply(ctx, $scope.project(vertA));
-                            ctx.lineTo.apply(ctx, $scope.project(vertB));
+                            ctx[cornerIndex == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vertA));
                         });
+                        ctx.closePath()
+                        ctx.stroke(); // or fill()
                     });
-
-                    ctx.stroke();
                 });
             };
 
