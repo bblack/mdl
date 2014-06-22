@@ -1,4 +1,4 @@
-var TARGET_FPS = 60;
+var TARGET_FPS = 30;
 
 m = angular.module('mdlr', []);
 
@@ -24,7 +24,7 @@ m.controller('QuadViewController', function($scope, $rootScope, $http){
         $rootScope.frame = 0;
     });
 
-    $scope.camPos = [0, -200, -100];
+    $scope.camPos = [0, -150, -100];
 });
 
 m.service('MdlNorms', function($http, Vec3){
@@ -50,10 +50,23 @@ m.service('MdlNorms', function($http, Vec3){
 
 m.service('Vec3', function(){
     var Vec3 = function(x, y, z){
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.x = x || 0;
+        this.y = y || 0;
+        this.z = z || 0;
     };
+
+    Vec3.centroid = function(vectors) {
+        var sum = new Vec3();
+        for (var i=0; i<vectors.length; i++) {
+            var v = vectors[i];
+            if (!Vec3.prototype.isPrototypeOf(v)) throw 'not a Vec3';
+            sum.x += v.x;
+            sum.y += v.y;
+            sum.z += v.z;
+        }
+        var centroid = sum.timesScalar(1/vectors.length);
+        return centroid;
+    }
 
     Vec3.prototype.dot = function(b) {
         var a = this;
@@ -96,6 +109,10 @@ m.service('Vec3', function(){
             Math.pow(this.z, 2));
     }
 
+    Vec3.prototype.distance = function(v) {
+        return Math.abs(this.minus(v).norm());
+    }
+
     Vec3.prototype.normalized = function(){
         var norm = this.norm();
         return this.timesScalar(1 / norm);
@@ -133,8 +150,10 @@ m.directive('projection', function(Vec3){
                 ctx.strokeStyle = '#e0e0e0';
                 ctx.fillStyle = '#e0e0e0';
 
-                // TODO _ determine order of triangles, based on the camera
-                model.triangles.forEach(function(tri, triIndex){
+                var orderTriangles = $scope.orderTriangles || function(m) { return m.triangles; };
+                var triangles = orderTriangles(model, $scope.frame);
+
+                triangles.forEach(function(tri, triIndex){
                     var verts = [];
 
                     ctx.beginPath();
@@ -151,7 +170,9 @@ m.directive('projection', function(Vec3){
                             .cross(verts[2].minus(verts[0]))
                             .normalized();
                         var light = surfaceNormal.dot(lightDir) * 0.5 + 0.5; // 0 to 1
-                        ctx.fillStyle = 'hsl(0, 0%, ' + (Math.floor(light*100)) + '%)';
+                        var lightByte = (Math.floor(light * 255)).toString(16);
+                        if (lightByte.length == 1) lightByte = '0' + lightByte;
+                        ctx.fillStyle = '#' + lightByte + lightByte + lightByte;
                         ctx.fill();
                     } else {
                         ctx.stroke();
@@ -212,7 +233,6 @@ m.directive('perspectiveProjection', function(Vec3, $interval, MdlNorms){
             model: '=',
             frame: '=',
             camPos: '=',
-            camDir: '=',
             redraw: '&'
         },
         template: '<projection></projection>',
@@ -257,10 +277,16 @@ m.directive('perspectiveProjection', function(Vec3, $interval, MdlNorms){
                 $scope.redraw();
             })
 
+            var transformSpace = function(p){
+                p = p.applyAffineTransform(centerObject);
+                p = p.applyAffineTransform(rotateObjectMatrix);
+                p = p.applyAffineTransform(worldToCameraMatrix);
+                return p;
+            }
+
             $scope.project = function(p) {
-                p = Vec3.prototype.applyAffineTransform.call(p, centerObject);
-                p = Vec3.prototype.applyAffineTransform.call(p, rotateObjectMatrix);
-                p = Vec3.prototype.applyAffineTransform.call(p, worldToCameraMatrix);
+                p = new Vec3(p.x, p.y, p.z);
+                p = transformSpace(p);
 
                 // project into 2d
                 var fovX, fovY;
@@ -279,6 +305,29 @@ m.directive('perspectiveProjection', function(Vec3, $interval, MdlNorms){
 
                 return p;
             }
+
+            $scope.orderTriangles = function(model, frameIndex){
+                var tris = $scope.model.triangles;
+                var frame = $scope.model.frames[$scope.frame].simpleFrame;
+                var camPos = $scope.camPos;
+                camPos = new Vec3(camPos[0], camPos[1], camPos[2]);
+                var camDir = new Vec3(0, 1, 0);
+
+                return _.sortBy(tris, function(tri){
+                    var verts = [];
+
+                    for (var i = 0; i < 3; i++) {
+                        var vertIndex = tri.vertIndeces[i];
+                        var vert = frame.verts[vertIndex];
+                        verts.push(new Vec3(vert.x, vert.y, vert.z));
+                    }
+
+                    var centroid = Vec3.centroid(verts);
+                    centroid = transformSpace(centroid);
+                    var distanceFromCamera = centroid.dot(camDir);
+                    return distanceFromCamera;
+                });
+            };
 
         }
     };
