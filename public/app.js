@@ -139,6 +139,8 @@ m.directive('projection', function(Vec3){
 
             var canvas = $element.find('canvas')[0];
 
+            var defaultOrderTris = function(m) { return m.triangles; }
+
             var draw = function(){
                 if (!$scope.model) { return; }
 
@@ -150,10 +152,11 @@ m.directive('projection', function(Vec3){
                 ctx.strokeStyle = '#e0e0e0';
                 ctx.fillStyle = '#e0e0e0';
 
-                var orderTriangles = $scope.orderTriangles || function(m) { return m.triangles; };
+                var orderTriangles = $scope.orderTriangles || defaultOrderTris;
                 var triangles = orderTriangles(model, $scope.frame);
 
-                triangles.forEach(function(tri, triIndex){
+                for (var triIndex = 0; triIndex < triangles.length; triIndex++) {
+                    var tri = triangles[triIndex];
                     var verts = [];
 
                     ctx.beginPath();
@@ -177,7 +180,7 @@ m.directive('projection', function(Vec3){
                     } else {
                         ctx.stroke();
                     }
-                });
+                }
             };
 
             var redraw = $scope.redraw = function(){
