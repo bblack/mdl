@@ -203,7 +203,7 @@ m.directive('projection', function(Vec3){
     };
 });
 
-m.directive('linearProjection', function(){
+m.directive('linearProjection', function(Vec3){
     return {
         restrict: 'E',
         scope: {
@@ -222,6 +222,33 @@ m.directive('linearProjection', function(){
                 ];
                 return projectedPoint;
             };
+
+            var camDir;
+
+            $scope.orderTriangles = function(model, frameIndex) {
+                var tris = model.triangles;
+                var frame = model.frames[$scope.frame].simpleFrame;
+
+                return _.sortBy(tris, function(tri){
+                    var verts = [];
+
+                    for (var i = 0; i < 3; i++) {
+                        var vertIndex = tri.vertIndeces[i];
+                        var vert = frame.verts[vertIndex];
+                        verts.push(new Vec3(vert.x, vert.y, vert.z));
+                    }
+
+                    var centroid = Vec3.centroid(verts);
+                    var distanceFromCamera = -1 * centroid.dot(camDir);
+                    return distanceFromCamera;
+                });
+            }
+
+            $scope.$watch('projectionMatrix', function(m){
+                camDir = new Vec3(m[0][0], m[0][1], m[0][2]).cross(
+                    new Vec3(m[1][0], m[1][1], m[1][2])
+                );
+            }, true);
         }
     };
 });
@@ -307,8 +334,8 @@ m.directive('perspectiveProjection', function(Vec3, $interval, MdlNorms){
             }
 
             $scope.orderTriangles = function(model, frameIndex){
-                var tris = $scope.model.triangles;
-                var frame = $scope.model.frames[$scope.frame].simpleFrame;
+                var tris = model.triangles;
+                var frame = model.frames[$scope.frame].simpleFrame;
                 var camPos = $scope.camPos;
                 camPos = new Vec3(camPos[0], camPos[1], camPos[2]);
                 var camDir = new Vec3(0, 1, 0);
