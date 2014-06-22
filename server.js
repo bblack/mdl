@@ -3,6 +3,7 @@ var app = express();
 var Mdl = require('./lib/Mdl');
 
 app.engine('html', require('ejs').renderFile);
+app.use(require('compression')());
 app.use('/public', express.static(__dirname + '/public'));
 
 app.get('/', function(req, res){
