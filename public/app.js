@@ -155,17 +155,15 @@ m.directive('projection', function(Vec3){
                 var orderTriangles = $scope.orderTriangles || defaultOrderTris;
                 var triangles = orderTriangles(model, $scope.frame);
 
-                for (var triIndex = 0; triIndex < triangles.length; triIndex++) {
-                    var tri = triangles[triIndex];
+                _.each(triangles, (tri) => {
                     var verts = [];
 
                     ctx.beginPath();
-                    for (var i = 0; i < 3; i++) {
-                        var vertIndex = tri.vertIndeces[i];
+                    _.each(tri.vertIndeces, (vertIndex, i) => {
                         var vert = model.frames[$scope.frame].simpleFrame.verts[vertIndex];
                         verts.push(new Vec3(vert.x, vert.y, vert.z));
                         ctx[i == 0 ? 'moveTo' : 'lineTo'].apply(ctx, $scope.project(vert));
-                    }
+                    })
                     ctx.closePath();
 
                     if ($scope.fill) {
@@ -180,7 +178,7 @@ m.directive('projection', function(Vec3){
                     } else {
                         ctx.stroke();
                     }
-                }
+                })
             };
 
             var redraw = $scope.redraw = function(){
