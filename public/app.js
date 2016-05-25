@@ -424,6 +424,20 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                         ctx.closePath();
                     })
                 })
+                _.each(['red', 'green', 'blue'], (color, i) => {
+                    var lineSegWorld = [[0, 0, 0], [0, 0, 0]];
+                    lineSegWorld[1][i] = 100;
+                    ctx.beginPath();
+                    ctx.strokeStyle = color;
+                    _.each(lineSegWorld, (vert, i) => {
+                        vert = new Vec3(vert[0], vert[1], vert[2]);
+                        vert = vert.applyAffineTransform(worldToCameraMatrix);
+                        vert = vert.applyAffineTransform(camToCanvasMatrix);
+                        ctx[i == 0 ? 'moveTo' : 'lineTo'](vert.x, vert.y);
+                    })
+                    ctx.stroke();
+                    ctx.closePath();
+                })
             }
             $interval(render, 1000)
         }
