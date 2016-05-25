@@ -360,3 +360,72 @@ m.directive('perspectiveProjection', function(Vec3, $interval, MdlNorms){
         }
     };
 });
+
+m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
+    return {
+        restrict: 'E',
+        scope: {
+            model: '=',
+            frame: '=',
+            camPos: '='
+        },
+        template: '<canvas width="320" height="240"></canvas>',
+        link: function($scope, $element){
+            var scene = {
+                entities: [{
+                    model: $scope.model,
+                    pos: [0, 150, 0],
+                    frame: $scope.frame
+                }]
+            };
+            $scope.$watch('model', (m) => {scene.entities[0].model = m});
+            $scope.$watch('frame', (f) => {scene.entities[0].frame = f});
+            var cam = {
+                // pos: [150, 400, 250]
+                // pos: [0, 0, 0]
+                pos: [-50, -100, -100]
+                // pos: [100, 100, 100]
+            };
+            var worldToCameraMatrix = [
+                [1, 0, 0, -cam.pos[0]],
+                [0, 1, 0, -cam.pos[1]],
+                [0, 0, 1, -cam.pos[2]]
+            ];
+            var canvas = $element.find('canvas')[0];
+            function render(){
+                var ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 0.5;
+                ctx.strokeStyle = '#e0e0e0';
+                var camToCanvasMatrix = [
+                    [1, 0, 0, 0],
+                    [0, -1, 0, canvas.height],
+                    [0, 0, 1, 0]
+                ];
+                _.each(scene.entities, (e) => {
+                    var frame = e.model.frames[$scope.frame].simpleFrame;
+                    var objToWorldMatrix = [
+                        [1, 0, 0, -e.pos[0]],
+                        [0, 1, 0, -e.pos[1]],
+                        [0, 0, 1, -e.pos[2]]
+                    ]
+                    _.each(e.model.triangles, (tri) => {
+                        ctx.beginPath();
+                        _.each(tri.vertIndeces, (vertIndex, i) => {
+                            var vert = frame.verts[vertIndex];
+                            vert = new Vec3(vert.x, vert.y, vert.z);
+                            vert = vert.applyAffineTransform(objToWorldMatrix);
+                            vert = vert.applyAffineTransform(worldToCameraMatrix);
+                            vert = vert.applyAffineTransform(camToCanvasMatrix);
+                            // TODO: perspective
+                            ctx[i == 0 ? 'moveTo' : 'lineTo'](vert.x, vert.y);
+                        });
+                        ctx.stroke();
+                        ctx.closePath();
+                    })
+                })
+            }
+            $interval(render, 1000)
+        }
+    }
+})
