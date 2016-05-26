@@ -378,8 +378,6 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                     frame: $scope.frame
                 }]
             };
-            $scope.$watch('model', (m) => {scene.entities[0].model = m});
-            $scope.$watch('frame', (f) => {scene.entities[0].frame = f});
             var cam = {
                 // pos: [150, 400, 250]
                 // pos: [0, 0, 0]
@@ -439,7 +437,9 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                     ctx.closePath();
                 })
             }
-            $interval(render, 1000)
+            $scope.$watch('model', (m) => {scene.entities[0].model = m});
+            $scope.$watch('frame', (f) => {scene.entities[0].frame = f});
+            $scope.$watchGroup(['model', 'frame'], render);
         }
     }
 })
