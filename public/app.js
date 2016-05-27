@@ -129,6 +129,22 @@ m.service('Vec3', function(){
     return Vec3;
 });
 
+function vecDotVec(v1, v2){
+    return _.inject(v1, (sum, v1comp, i) => {
+        return sum + v1[i]*v2[i];
+    }, 0);
+}
+
+function vecTimesMatrix(v, m){
+    return _.map(m, (col) => {
+        return vecDotVec(col, v);
+    })
+}
+
+function homog4dTo3d(h) {
+    return [h[0] / h[3], h[1] / h[3], h[2] / h[3]]
+}
+
 m.directive('projection', function(Vec3){
     return {
         restrict: 'E',
@@ -369,8 +385,15 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
             frame: '=',
             camPos: '='
         },
-        template: '<canvas width="320" height="240"></canvas>',
+        template: '<canvas></canvas>',
         link: function($scope, $element){
+            function sizeCanvasToContainer(){
+                var canvas = $element.find('canvas');
+                canvas.attr('width', $element.width());
+                canvas.attr('height', $element.height());
+            }
+            sizeCanvasToContainer();
+            $(window).on('resize', sizeCanvasToContainer);
             var scene = {
                 entities: [{
                     model: $scope.model,
@@ -381,7 +404,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
             var cam = {
                 // pos: [150, 400, 250]
                 // pos: [0, 0, 0]
-                pos: [-50, -100, -100]
+                pos: [0, 0, -100]
                 // pos: [100, 100, 100]
             };
             var worldToCameraMatrix = [
@@ -389,7 +412,27 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 [0, 1, 0, -cam.pos[1]],
                 [0, 0, 1, -cam.pos[2]]
             ];
+            var zNear = 50;
+            var zFar = 100;
+            var camToClipMatrix = [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, zFar / (zFar - zNear), zFar * -zNear / (zFar - zNear)],
+                [0, 0, 1, 0]
+            ];
             var canvas = $element.find('canvas')[0];
+            function worldToCanvas(vert){
+                vert = vert.applyAffineTransform(worldToCameraMatrix);
+                var vertHomog = [vert.x, vert.y, vert.z, 1];
+                vertHomog = vecTimesMatrix(vertHomog, camToClipMatrix);
+                vert = homog4dTo3d(vertHomog);
+                // clip space is x: [-1, 1], y: [-1, 1], z: [0, 1]
+                vert = [
+                    canvas.width / 2 * (vert[0] + 1),
+                    canvas.height / 2 * (-vert[1] + 1)
+                ];
+                return vert;
+            }
             function render(){
                 var ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -413,10 +456,8 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                             var vert = frame.verts[vertIndex];
                             vert = new Vec3(vert.x, vert.y, vert.z);
                             vert = vert.applyAffineTransform(objToWorldMatrix);
-                            vert = vert.applyAffineTransform(worldToCameraMatrix);
-                            vert = vert.applyAffineTransform(camToCanvasMatrix);
-                            // TODO: perspective
-                            ctx[i == 0 ? 'moveTo' : 'lineTo'](vert.x, vert.y);
+                            vert = worldToCanvas(vert);
+                            ctx[i == 0 ? 'moveTo' : 'lineTo'](vert[0], vert[1]);
                         });
                         ctx.stroke();
                         ctx.closePath();
@@ -429,9 +470,8 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                     ctx.strokeStyle = color;
                     _.each(lineSegWorld, (vert, i) => {
                         vert = new Vec3(vert[0], vert[1], vert[2]);
-                        vert = vert.applyAffineTransform(worldToCameraMatrix);
-                        vert = vert.applyAffineTransform(camToCanvasMatrix);
-                        ctx[i == 0 ? 'moveTo' : 'lineTo'](vert.x, vert.y);
+                        vert = worldToCanvas(vert);
+                        ctx[i == 0 ? 'moveTo' : 'lineTo'](vert[0], vert[1]);
                     })
                     ctx.stroke();
                     ctx.closePath();
