@@ -433,6 +433,21 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 ];
                 return vert;
             }
+            function drawAxes(ctx){
+                _.each(['red', 'green', 'blue'], (color, i) => {
+                    var lineSegWorld = [[0, 0, 0], [0, 0, 0]];
+                    lineSegWorld[1][i] = 100;
+                    ctx.beginPath();
+                    ctx.strokeStyle = color;
+                    _.each(lineSegWorld, (vert, i) => {
+                        vert = new Vec3(vert[0], vert[1], vert[2]);
+                        vert = worldToCanvas(vert);
+                        ctx[i == 0 ? 'moveTo' : 'lineTo'](vert[0], vert[1]);
+                    })
+                    ctx.stroke();
+                    ctx.closePath();
+                })
+            }
             function render(){
                 var ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -463,19 +478,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                         ctx.closePath();
                     })
                 })
-                _.each(['red', 'green', 'blue'], (color, i) => {
-                    var lineSegWorld = [[0, 0, 0], [0, 0, 0]];
-                    lineSegWorld[1][i] = 100;
-                    ctx.beginPath();
-                    ctx.strokeStyle = color;
-                    _.each(lineSegWorld, (vert, i) => {
-                        vert = new Vec3(vert[0], vert[1], vert[2]);
-                        vert = worldToCanvas(vert);
-                        ctx[i == 0 ? 'moveTo' : 'lineTo'](vert[0], vert[1]);
-                    })
-                    ctx.stroke();
-                    ctx.closePath();
-                })
+                drawAxes(ctx);
             }
             $scope.$watch('model', (m) => {scene.entities[0].model = m});
             $scope.$watch('frame', (f) => {scene.entities[0].frame = f});
