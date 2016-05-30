@@ -453,11 +453,6 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.lineWidth = 0.5;
                 ctx.strokeStyle = '#e0e0e0';
-                var camToCanvasMatrix = [
-                    [1, 0, 0, 0],
-                    [0, -1, 0, canvas.height],
-                    [0, 0, 1, 0]
-                ];
                 _.each(scene.entities, (e) => {
                     var frame = e.model.frames[$scope.frame].simpleFrame;
                     var objToWorldMatrix = [
