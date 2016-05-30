@@ -387,10 +387,12 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
         },
         template: '<canvas></canvas>',
         link: function($scope, $element){
+            var zbuf;
             function sizeCanvasToContainer(){
-                var canvas = $element.find('canvas');
-                canvas.attr('width', $element.width());
-                canvas.attr('height', $element.height());
+                var w = $element.width();
+                var h = $element.height();
+                $element.find('canvas').attr('width', w).attr('height', h);
+                zbuf = new Uint8ClampedArray(4*w*h);
             }
             sizeCanvasToContainer();
             $(window).on('resize', sizeCanvasToContainer);
@@ -402,10 +404,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 }]
             };
             var cam = {
-                // pos: [150, 400, 250]
-                // pos: [0, 0, 0]
                 pos: [0, 0, -100]
-                // pos: [100, 100, 100]
             };
             var worldToCameraMatrix = [
                 [1, 0, 0, -cam.pos[0]],
@@ -413,7 +412,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 [0, 0, 1, -cam.pos[2]]
             ];
             var zNear = 50;
-            var zFar = 100;
+            var zFar = 400;
             var camToClipMatrix = [
                 [1, 0, 0, 0],
                 [0, 1, 0, 0],
@@ -429,7 +428,8 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 // clip space is x: [-1, 1], y: [-1, 1], z: [0, 1]
                 vert = [
                     canvas.width / 2 * (vert[0] + 1),
-                    canvas.height / 2 * (-vert[1] + 1)
+                    canvas.height / 2 * (-vert[1] + 1),
+                    vert[2]
                 ];
                 return vert;
             }
@@ -448,11 +448,13 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                     ctx.closePath();
                 })
             }
+            function signedParArea2(a, b, c){ // basically ||(b-a) x (c-b)||
+                return (c[0] - a[0])*(b[1] - a[1]) - (c[1] - a[1])*(b[0] - a[0]);
+            }
             function render(){
                 var ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.lineWidth = 0.5;
-                ctx.strokeStyle = '#e0e0e0';
+                zbuf.fill(255);
                 _.each(scene.entities, (e) => {
                     var frame = e.model.frames[$scope.frame].simpleFrame;
                     var objToWorldMatrix = [
@@ -461,18 +463,39 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                         [0, 0, 1, -e.pos[2]]
                     ]
                     _.each(e.model.triangles, (tri) => {
-                        ctx.beginPath();
-                        _.each(tri.vertIndeces, (vertIndex, i) => {
+                        var screenVerts = _.map(tri.vertIndeces, (vertIndex, i) => {
                             var vert = frame.verts[vertIndex];
                             vert = new Vec3(vert.x, vert.y, vert.z);
                             vert = vert.applyAffineTransform(objToWorldMatrix);
-                            vert = worldToCanvas(vert);
-                            ctx[i == 0 ? 'moveTo' : 'lineTo'](vert[0], vert[1]);
-                        });
-                        ctx.stroke();
-                        ctx.closePath();
+                            return worldToCanvas(vert);
+                        })
+                        xmin = Math.floor(_.min(_.pluck(screenVerts, 0)));
+                        xmax = Math.ceil(_.max(_.pluck(screenVerts, 0)));
+                        ymin = Math.floor(_.min(_.pluck(screenVerts, 1)));
+                        ymax = Math.ceil(_.max(_.pluck(screenVerts, 1)));
+                        for (var x = Math.max(xmin, 0); x < xmax && x < canvas.width; x++) {
+                            for (var y = Math.max(ymin, 0); y < ymax && y < canvas.height; y++) {
+                                var p = [x, y];
+                                var triarea2 = signedParArea2(screenVerts[0], screenVerts[1], screenVerts[2]);
+                                var w0 = signedParArea2(screenVerts[1], screenVerts[2], p);
+                                var w1 = signedParArea2(screenVerts[2], screenVerts[0], p);
+                                var w2 = signedParArea2(screenVerts[0], screenVerts[1], p);
+                                if (w0 >= 0 && w1 >= 0 && w2 >= 0) { // p in screen tri?
+                                    w0 /= triarea2;
+                                    w1 /= triarea2;
+                                    w2 /= triarea2;
+                                    // interp p.z from vert z's
+                                    var z = w0*screenVerts[0][2] + w1*screenVerts[1][2] + w2*screenVerts[2][2];
+                                    _.times(3, (i) => {
+                                        var zbufindex = 4*(canvas.width * y + x) + i;
+                                        zbuf[zbufindex] = Math.min(zbuf[zbufindex], z*255);
+                                    });
+                                }
+                            }
+                        }
                     })
                 })
+                ctx.putImageData(new ImageData(zbuf, canvas.width, canvas.height), 0, 0);
                 drawAxes(ctx);
             }
             $scope.$watch('model', (m) => {scene.entities[0].model = m});
