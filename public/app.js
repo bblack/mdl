@@ -130,15 +130,19 @@ m.service('Vec3', function(){
 });
 
 function vecDotVec(v1, v2){
-    return _.inject(v1, (sum, v1comp, i) => {
-        return sum + v1[i]*v2[i];
-    }, 0);
+    var out = 0;
+    for (var i=0; i<v1.length; i++) {
+        out += v1[i] * v2[i];
+    }
+    return out;
 }
 
 function vecTimesMatrix(v, m){
-    return _.map(m, (col) => {
-        return vecDotVec(col, v);
-    })
+    var out = new Array(m.length);
+    for (var i=0; i<m.length; i++) {
+        out[i] = vecDotVec(m[i], v);
+    }
+    return out;
 }
 
 function homog4dTo3d(h) {
