@@ -1,5 +1,13 @@
 var TARGET_FPS = 30;
 
+function mean(vals){
+    var sum = 0;
+    for (i in vals) {
+        sum += vals[i];
+    }
+    return sum / vals.length;
+}
+
 m = angular.module('mdlr', []);
 
 m.controller('ControlsController', function($scope, $interval, $rootScope){
@@ -421,6 +429,17 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 [0, 0, 1, 0]
             ];
             var canvas = $element.find('canvas')[0];
+            var renderTimes = [];
+            function recordRenderTime(t){
+                renderTimes.push(t);
+                while (renderTimes.length > 10) renderTimes.shift();
+            }
+            function drawFps(ctx){
+                ctx.fillStyle = 'black';
+                ctx.font = '10px sans-serif';
+                var fpstext = Math.floor(1000 / mean(renderTimes)).toString();
+                ctx.fillText(fpstext, 10, 20);
+            }
             function worldToCanvas(vert){
                 vert = vert.applyAffineTransform(worldToCameraMatrix);
                 var vertHomog = [vert.x, vert.y, vert.z, 1];
@@ -487,8 +506,8 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 }
             }
             function render(){
+                var start = Date.now();
                 var ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 zbuf.fill(255);
                 _.each(scene.entities, (e) => {
                     var frame = e.model.frames[$scope.frame].simpleFrame;
@@ -508,8 +527,11 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                         rasterize(bbox, canvas.width, canvas.height, screenVerts);
                     })
                 })
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.putImageData(new ImageData(zbuf, canvas.width, canvas.height), 0, 0);
                 drawAxes(ctx);
+                recordRenderTime(Date.now() - start);
+                drawFps(ctx);
                 window.requestAnimationFrame(render);
             }
             window.requestAnimationFrame(render);
