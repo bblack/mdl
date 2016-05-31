@@ -382,7 +382,8 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                     ymax: Math.ceil(Math.max(sv[0][1], sv[1][1], sv[2][1]))
                 };
             }
-            function rasterize(bbox, w, h, screenVerts){
+            function rasterize(w, h, screenVerts){
+                var bbox = getbbox(screenVerts);
                 for (var x = Math.max(bbox.xmin, 0); x < bbox.xmax && x < w; x++) {
                     for (var y = Math.max(bbox.ymin, 0); y < bbox.ymax && y < h; y++) {
                         var p = [x, y];
@@ -414,8 +415,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                             vert = vert.applyAffineTransform(objToWorldMatrix);
                             return worldToCanvas(vert);
                         })
-                        var bbox = getbbox(screenVerts);
-                        rasterize(bbox, canvas.width, canvas.height, screenVerts);
+                        rasterize(canvas.width, canvas.height, screenVerts);
                     })
                 })
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
