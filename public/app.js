@@ -409,12 +409,14 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                         [0, 0, 1, -e.pos[2]]
                     ]
                     _.each(e.model.triangles, function rasterizeTri(tri){
-                        var screenVerts = _.map(tri.vertIndeces, (vertIndex, i) => {
+                        var screenVerts = new Array(3);
+                        for (var i=0; i<tri.vertIndeces.length; i++) {
+                            var vertIndex = tri.vertIndeces[i];
                             var vert = frame.verts[vertIndex];
                             vert = new Vec3(vert.x, vert.y, vert.z);
                             vert = vert.applyAffineTransform(objToWorldMatrix);
-                            return worldToCanvas(vert);
-                        })
+                            screenVerts[i] = worldToCanvas(vert);
+                        }
                         rasterize(canvas.width, canvas.height, screenVerts);
                     })
                 })
