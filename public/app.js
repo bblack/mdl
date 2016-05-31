@@ -382,6 +382,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
         restrict: 'E',
         scope: {
             model: '=',
+            pos: '=',
             frame: '=',
             camPos: '='
         },
@@ -397,11 +398,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
             sizeCanvasToContainer();
             $(window).on('resize', sizeCanvasToContainer);
             var scene = {
-                entities: [{
-                    model: $scope.model,
-                    pos: [0, 150, 0],
-                    frame: $scope.frame
-                }]
+                entities: []
             };
             var cam = {
                 pos: [0, 0, -100]
@@ -497,10 +494,13 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 })
                 ctx.putImageData(new ImageData(zbuf, canvas.width, canvas.height), 0, 0);
                 drawAxes(ctx);
+                window.requestAnimationFrame(render);
             }
-            $scope.$watch('model', (m) => {scene.entities[0].model = m});
-            $scope.$watch('frame', (f) => {scene.entities[0].frame = f});
-            $scope.$watchGroup(['model', 'frame'], render);
+            window.requestAnimationFrame(render);
+            $scope.$watchGroup(['model', 'frame', 'pos'], (newvals) => {
+                if (!newvals[0]) return;
+                scene.entities = [{model: newvals[0], frame: newvals[1], pos: newvals[2]}];
+            });
         }
     }
 })
