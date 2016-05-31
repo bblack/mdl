@@ -483,10 +483,11 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                                     w2 /= triarea2;
                                     // interp p.z from vert z's
                                     var z = w0*screenVerts[0][2] + w1*screenVerts[1][2] + w2*screenVerts[2][2];
-                                    _.times(3, (i) => {
-                                        var zbufindex = 4*(canvas.width * y + x) + i;
-                                        zbuf[zbufindex] = Math.min(zbuf[zbufindex], z*255);
-                                    });
+                                    z *= 255;
+                                    var zbufindex = 4*(canvas.width * y + x);
+                                    if (z < zbuf[zbufindex]) {
+                                        zbuf.fill(z, zbufindex, zbufindex + 3);
+                                    }
                                 }
                             }
                         }
