@@ -460,12 +460,12 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                     zbuf.fill(z, zbufindex, zbufindex + 3);
                 }
             }
-            function getbbox(screenVerts){
+            function getbbox(sv){ // screenverts
                 return {
-                    xmin: Math.floor(_.min(_.pluck(screenVerts, 0))),
-                    xmax: Math.ceil(_.max(_.pluck(screenVerts, 0))),
-                    ymin: Math.floor(_.min(_.pluck(screenVerts, 1))),
-                    ymax: Math.ceil(_.max(_.pluck(screenVerts, 1)))
+                    xmin: Math.floor(Math.min(sv[0][0], sv[1][0], sv[2][0])),
+                    xmax: Math.ceil(Math.max(sv[0][0], sv[1][0], sv[2][0])),
+                    ymin: Math.floor(Math.min(sv[0][1], sv[1][1], sv[2][1])),
+                    ymax: Math.ceil(Math.max(sv[0][1], sv[1][1], sv[2][1]))
                 };
             }
             function rasterize(bbox, w, h, screenVerts){
