@@ -6,6 +6,9 @@ var fs = require('fs');
 app.engine('html', require('ejs').renderFile);
 app.use(require('compression')());
 app.use('/public', express.static(__dirname + '/public'));
+app.get('/favicon.ico', (req, res) => {
+    res.sendfile('./public/favicon.ico');
+});
 
 app.get('/', function(req, res){
     res.render('index.html');
