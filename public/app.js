@@ -333,7 +333,7 @@ m.directive('perspectiveProjectionRay', function(Vec3, $interval, MdlNorms){
                 while (renderTimes.length > 10) renderTimes.shift();
             }
             function drawFps(ctx){
-                ctx.fillStyle = 'black';
+                ctx.fillStyle = 'white';
                 ctx.font = '10px sans-serif';
                 var fpstext = Math.floor(1000 / mean(renderTimes)).toString();
                 ctx.fillText(fpstext, 10, 20);
