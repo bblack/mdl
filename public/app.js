@@ -371,10 +371,10 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 // tackle for-condition checking?
                 // * clip bbox before looping?
                 // ??
+                var triarea2 = signedParArea2(screenVerts[0], screenVerts[1], screenVerts[2]);
                 for (var x = xmin; x < xmax; x++) {
                     for (var y = ymin; y < ymax; y++) {
                         var p = [x, y];
-                        var triarea2 = signedParArea2(screenVerts[0], screenVerts[1], screenVerts[2]);
                         var w0 = signedParArea2(screenVerts[1], screenVerts[2], p);
                         var w1 = signedParArea2(screenVerts[2], screenVerts[0], p);
                         var w2 = signedParArea2(screenVerts[0], screenVerts[1], p);
