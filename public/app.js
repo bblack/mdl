@@ -287,7 +287,7 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 while (renderTimes.length > 10) renderTimes.shift();
             }
             function drawFps(ctx){
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = 'red';
                 ctx.font = '10px sans-serif';
                 var fpstext = Math.floor(1000 / mean(renderTimes)).toString();
                 ctx.fillText(fpstext, 10, 20);
@@ -326,10 +326,9 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
             function calcZAndWriteToZBufIfLower(w0, w1, w2, triarea2, screenVerts, w, y, x, stVerts, facesFront, skin){
                 baryweights = [w0 / triarea2, w1 / triarea2, w2 / triarea2];
                 // interp p.z from vert z's
-                var z = 0;
-                for (var i=0; i<3; i++) {
-                    z += baryweights[i]*screenVerts[i][2];
-                }
+                var z = baryweights[0]*screenVerts[0][2] +
+                    baryweights[1]*screenVerts[1][2] +
+                    baryweights[2]*screenVerts[2][2];
                 z *= 255;
                 var zbufindex = 4*(w * y + x);
                 var skinwidth = 296;
@@ -346,7 +345,7 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                     }
                     var colorindex = skin[Math.floor(t)*skinwidth + Math.floor(s)];
                     var color = $scope.$root.palette[colorindex];
-                    fbuf.set(color.concat(255), zbufindex);
+                    fbuf.set(color, zbufindex);
                 }
             }
             function getbbox(sv){ // screenverts
@@ -363,7 +362,7 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 var xmax = Math.min(bbox.xmax, w);
                 var ymin = Math.max(bbox.ymin, 0);
                 var ymax = Math.min(bbox.ymax, h);
-                // TODO: the bottleneck is rasterize itself--not any of the functions it calls.
+                // TODO: 2nd bottleneck is rasterize itself (behind calcZAnd...)
                 // which means our options for speedups are:
                 // loop fewer times
                 // single loop instead of nested
@@ -389,7 +388,7 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 var start = Date.now();
                 var ctx = canvas.getContext('2d');
                 zbuf.fill(255);
-                fbuf.fill(0);
+                fbuf.fill(255);
                 _.each(scene.entities, (e) => {
                     var frame = e.model.frames[$scope.frame].simpleFrame;
                     var objToWorldMatrix = [
