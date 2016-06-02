@@ -358,9 +358,21 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 };
             }
             function rasterize(w, h, screenVerts, stVerts, facesFront, skin){
-                var bbox = getbbox(screenVerts);
-                for (var x = Math.max(bbox.xmin, 0); x < bbox.xmax && x < w; x++) {
-                    for (var y = Math.max(bbox.ymin, 0); y < bbox.ymax && y < h; y++) {
+                var bbox = getbbox(screenVerts); // then clip to screen:
+                var xmin = Math.max(bbox.xmin, 0);
+                var xmax = Math.min(bbox.xmax, w);
+                var ymin = Math.max(bbox.ymin, 0);
+                var ymax = Math.min(bbox.ymax, h);
+                // TODO: the bottleneck is rasterize itself--not any of the functions it calls.
+                // which means our options for speedups are:
+                // loop fewer times
+                // single loop instead of nested
+                // allocate less
+                // tackle for-condition checking?
+                // * clip bbox before looping?
+                // ??
+                for (var x = xmin; x < xmax; x++) {
+                    for (var y = ymin; y < ymax; y++) {
                         var p = [x, y];
                         var triarea2 = signedParArea2(screenVerts[0], screenVerts[1], screenVerts[2]);
                         var w0 = signedParArea2(screenVerts[1], screenVerts[2], p);
