@@ -5,6 +5,25 @@ function mean(vals){
     }
     return sum / vals.length;
 }
+function m33timesm33(m1, m2){
+    return [
+        [
+            Vec3.fromArray(m1[0]).dot([m2[0][0], m2[0][1], m2[0][2]]),
+            Vec3.fromArray(m1[0]).dot([m2[1][0], m2[1][1], m2[1][2]]),
+            Vec3.fromArray(m1[0]).dot([m2[2][0], m2[2][1], m2[2][2]]),
+        ],
+        [
+            Vec3.fromArray(m1[1]).dot([m2[0][0], m2[0][1], m2[0][2]]),
+            Vec3.fromArray(m1[1]).dot([m2[1][0], m2[1][1], m2[1][2]]),
+            Vec3.fromArray(m1[1]).dot([m2[2][0], m2[2][1], m2[2][2]]),
+        ],
+        [
+            Vec3.fromArray(m1[2]).dot([m2[0][0], m2[0][1], m2[0][2]]),
+            Vec3.fromArray(m1[2]).dot([m2[1][0], m2[1][1], m2[1][2]]),
+            Vec3.fromArray(m1[2]).dot([m2[2][0], m2[2][1], m2[2][2]]),
+        ]
+    ]
+}
 
 m = angular.module('mdlr', []);
 
@@ -230,12 +249,28 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 entities: []
             };
             var cam = {
-                pos: [0, 0, -100]
+                // all 0s means looking along Z+ (with Y+ up and X+ right)
+                angles: [Math.PI*14/10, Math.PI/2],
+                pos: [0, 100, -250]
             };
+            var yaw = cam.angles[0];
+            var yawMatrix = [
+                [Math.cos(yaw), 0, -Math.sin(yaw)],
+                [0, 1, 0],
+                [Math.sin(yaw), 0, Math.cos(yaw)]
+            ];
+            var pitch = cam.angles[1];
+            var pitchMatrix = [
+                [1, 0, 0],
+                [0, Math.cos(pitch), -Math.sin(pitch)],
+                [0, Math.sin(pitch), Math.cos(pitch)]
+            ];
+            var worldToCameraRotMatrix = m33timesm33(yawMatrix, pitchMatrix);
+            // TODO: this rotates the world, then translates it--it should do the opposite
             var worldToCameraMatrix = [
-                [1, 0, 0, -cam.pos[0]],
-                [0, 1, 0, -cam.pos[1]],
-                [0, 0, 1, -cam.pos[2]]
+                worldToCameraRotMatrix[0].concat(-cam.pos[0]),
+                worldToCameraRotMatrix[1].concat(-cam.pos[1]),
+                worldToCameraRotMatrix[2].concat(-cam.pos[2])
             ];
             var zNear = 50;
             var zFar = 400;

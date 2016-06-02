@@ -4,6 +4,10 @@ function Vec3(x, y, z){
     this.z = z || 0;
 };
 
+Vec3.fromArray = function(a){
+    return new Vec3(a[0], a[1], a[2]);
+}
+
 Vec3.centroid = function(vectors) {
     var sum = new Vec3();
     for (var i=0; i<vectors.length; i++) {
