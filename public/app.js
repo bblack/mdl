@@ -323,8 +323,10 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
             function signedParArea2(a, b, c){ // basically ||(b-a) x (c-b)||
                 return (c[0] - a[0])*(b[1] - a[1]) - (c[1] - a[1])*(b[0] - a[0]);
             }
-            function calcZAndWriteToZBufIfLower(w0, w1, w2, triarea2, screenVerts, w, y, x, stVerts, facesFront, skin){
-                baryweights = [w0 / triarea2, w1 / triarea2, w2 / triarea2];
+            function calcZAndWriteToZBufIfLower(w0, w1, w2, screenVerts, w, y, x, stVerts, facesFront, skin){
+                // the determinants are proportional baryweights, which sum to 1, so:
+                var wsum = w0 + w1 + w2;
+                var baryweights = [w0 / wsum, w1 / wsum, w2 / wsum];
                 // interp p.z from vert z's
                 var z = baryweights[0]*screenVerts[0][2] +
                     baryweights[1]*screenVerts[1][2] +
@@ -370,7 +372,6 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                 // tackle for-condition checking?
                 // * clip bbox before looping?
                 // ??
-                var triarea2 = signedParArea2(screenVerts[0], screenVerts[1], screenVerts[2]);
                 for (var x = xmin; x < xmax; x++) {
                     for (var y = ymin; y < ymax; y++) {
                         var p = [x, y];
@@ -378,7 +379,7 @@ m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
                         var w1 = signedParArea2(screenVerts[2], screenVerts[0], p);
                         var w2 = signedParArea2(screenVerts[0], screenVerts[1], p);
                         if (w0 >= 0 && w1 >= 0 && w2 >= 0) { // p in screen tri?
-                            calcZAndWriteToZBufIfLower(w0, w1, w2, triarea2, screenVerts,
+                            calcZAndWriteToZBufIfLower(w0, w1, w2, screenVerts,
                                 w, y, x, stVerts, facesFront, skin);
                         }
                     }
