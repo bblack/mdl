@@ -221,7 +221,7 @@ m.directive('linearProjection', function(){
     };
 });
 
-m.directive('perspectiveProjectionRay', function($interval, MdlNorms){
+m.directive('perspectiveProjection', function($interval, MdlNorms){
     return {
         restrict: 'E',
         scope: {
