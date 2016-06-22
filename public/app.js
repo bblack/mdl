@@ -45,7 +45,14 @@ m.controller('ControlsController', function($scope, $interval, $rootScope){
 m.controller('QuadViewController', function($scope, $rootScope, $http){
     $http.get('player.mdl')
     .then(function(res){
-        $rootScope.model = res.data;
+        var model = $rootScope.model = res.data;
+        _.each(model.frames, (f) => {
+            _.each(f.simpleFrame.verts, (v) => {
+                v.x = v.x * model.scale[0] + model.translate[0];
+                v.y = v.y * model.scale[1] + model.translate[1];
+                v.z = v.z * model.scale[2] + model.translate[2];
+            })
+        })
         $rootScope.frame = 0;
     });
     $http.get('palette')
@@ -226,7 +233,6 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         restrict: 'E',
         scope: {
             model: '=',
-            pos: '=',
             frame: '=',
             camPos: '='
         },
@@ -250,8 +256,8 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             };
             var cam = {
                 // all 0s means looking along Z+ (with Y+ up and X+ right)
-                angles: [Math.PI*14/10, Math.PI/2],
-                pos: [0, 100, -250]
+                angles: [3*Math.PI/2, Math.PI/2],
+                pos: [0, 0, -50]
             };
             var yaw = cam.angles[0];
             var yawMatrix = [
@@ -308,7 +314,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             function drawAxes(ctx){
                 _.each(['red', 'green', 'blue'], (color, i) => {
                     var lineSegWorld = [[0, 0, 0], [0, 0, 0]];
-                    lineSegWorld[1][i] = 100;
+                    lineSegWorld[1][i] = 10;
                     ctx.beginPath();
                     ctx.strokeStyle = color;
                     _.each(lineSegWorld, (vert, i) => {
@@ -392,10 +398,11 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 fbuf.fill(255);
                 _.each(scene.entities, (e) => {
                     var frame = e.model.frames[$scope.frame].simpleFrame;
+                    var epos = [0, 0, 0];
                     var objToWorldMatrix = [
-                        [1, 0, 0, -e.pos[0]],
-                        [0, 1, 0, -e.pos[1]],
-                        [0, 0, 1, -e.pos[2]]
+                        [1, 0, 0, -epos[0]],
+                        [0, 1, 0, -epos[1]],
+                        [0, 0, 1, -epos[2]]
                     ]
                     _.each(e.model.triangles, function rasterizeTri(tri){
                         var screenVerts = new Array(3);
