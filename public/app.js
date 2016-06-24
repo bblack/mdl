@@ -278,8 +278,8 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 worldToCameraRotMatrix[1].concat(-cam.pos[1]),
                 worldToCameraRotMatrix[2].concat(-cam.pos[2])
             ];
-            var zNear = 50;
-            var zFar = 400;
+            var zNear = -2;
+            var zFar = 2;
             var camToClipMatrix = [
                 [1, 0, 0, 0],
                 [0, 1, 0, 0],
@@ -326,106 +326,81 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                     ctx.closePath();
                 })
             }
-            function signedParArea2(a, b, c){ // basically ||(b-a) x (c-b)||
-                return (c[0] - a[0])*(b[1] - a[1]) - (c[1] - a[1])*(b[0] - a[0]);
-            }
-            function calcZAndWriteToZBufIfLower(w0, w1, w2, screenVerts, w, y, x, stVerts, facesFront, skin){
-                // the determinants are proportional baryweights, which sum to 1, so:
-                var wsum = w0 + w1 + w2;
-                var baryweights = [w0 / wsum, w1 / wsum, w2 / wsum];
-                // interp p.z from vert z's
-                var z = baryweights[0]*screenVerts[0][2] +
-                    baryweights[1]*screenVerts[1][2] +
-                    baryweights[2]*screenVerts[2][2];
-                z *= 255;
-                var zbufindex = 4*(w * y + x);
-                var skinwidth = 296;
-                if (z < zbuf[zbufindex]) {
-                    zbuf.fill(z, zbufindex, zbufindex + 3);
-                    var s = 0;
-                    var t = 0;
-                    for (var i=0; i<3; i++) {
-                        s += baryweights[i] * stVerts[i].s;
-                        if (!facesFront && stVerts[i].onSeam) {
-                            s += baryweights[i]*skinwidth/2;
-                        }
-                        t += baryweights[i] * stVerts[i].t;
-                    }
-                    var colorindex = skin[Math.floor(t)*skinwidth + Math.floor(s)];
-                    var color = $scope.$root.palette[colorindex];
-                    fbuf.set(color, zbufindex);
+            var gl = canvas.getContext('webgl');
+            gl.enable(gl.DEPTH_TEST);
+            // vert shader:
+            var vertshader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertshader, `
+                attribute vec3 aVertexPosition;
+                uniform mat4 matrix;
+                void main(void){
+                    gl_Position = matrix * vec4(aVertexPosition, 1.0);
                 }
+            `);
+            gl.compileShader(vertshader);
+            if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+                throw new Error(gl.getShaderInfoLog(vertshader));
             }
-            function getbbox(sv){ // screenverts
-                return {
-                    xmin: Math.floor(Math.min(sv[0][0], sv[1][0], sv[2][0])),
-                    xmax: Math.ceil(Math.max(sv[0][0], sv[1][0], sv[2][0])),
-                    ymin: Math.floor(Math.min(sv[0][1], sv[1][1], sv[2][1])),
-                    ymax: Math.ceil(Math.max(sv[0][1], sv[1][1], sv[2][1]))
-                };
-            }
-            function rasterize(w, h, screenVerts, stVerts, facesFront, skin){
-                var bbox = getbbox(screenVerts); // then clip to screen:
-                var xmin = Math.max(bbox.xmin, 0);
-                var xmax = Math.min(bbox.xmax, w);
-                var ymin = Math.max(bbox.ymin, 0);
-                var ymax = Math.min(bbox.ymax, h);
-                // TODO: 2nd bottleneck is rasterize itself (behind calcZAnd...)
-                // which means our options for speedups are:
-                // loop fewer times
-                // single loop instead of nested
-                // allocate less
-                // tackle for-condition checking?
-                // * clip bbox before looping?
-                // ??
-                for (var x = xmin; x < xmax; x++) {
-                    for (var y = ymin; y < ymax; y++) {
-                        var p = [x, y];
-                        var w0 = signedParArea2(screenVerts[1], screenVerts[2], p);
-                        var w1 = signedParArea2(screenVerts[2], screenVerts[0], p);
-                        var w2 = signedParArea2(screenVerts[0], screenVerts[1], p);
-                        if (w0 >= 0 && w1 >= 0 && w2 >= 0) { // p in screen tri?
-                            calcZAndWriteToZBufIfLower(w0, w1, w2, screenVerts,
-                                w, y, x, stVerts, facesFront, skin);
-                        }
-                    }
+            // frag shader:
+            var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragshader, `
+                void main(void){
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
                 }
+            `);
+            gl.compileShader(fragshader);
+            if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+                throw new Error(gl.getShaderInfoLog(fragshader));
             }
+            var shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertshader);
+            gl.attachShader(shaderProgram, fragshader);
+            gl.linkProgram(shaderProgram);
+            gl.useProgram(shaderProgram);
+            var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+            gl.enableVertexAttribArray(vertexPositionAttribute);
+            var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
+            // this identity matrix is an orthographic projection. if we change
+            // it to perspective, we'll need to know the location of the near and
+            // far z-clipping planes--this means we'll need a camera location, and
+            // it definitely shouldn't be at the origin because that's about where
+            // this model is located.
+            gl.uniformMatrix4fv(matrixUniform, false, new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ]));
+            // vertex buffer:
+            var buf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             function render(){
-                var start = Date.now();
-                var ctx = canvas.getContext('2d');
-                zbuf.fill(255);
-                fbuf.fill(255);
-                _.each(scene.entities, (e) => {
-                    var frame = e.model.frames[$scope.frame].simpleFrame;
-                    var epos = [0, 0, 0];
-                    var objToWorldMatrix = [
-                        [1, 0, 0, -epos[0]],
-                        [0, 1, 0, -epos[1]],
-                        [0, 0, 1, -epos[2]]
-                    ]
-                    _.each(e.model.triangles, function rasterizeTri(tri){
-                        var screenVerts = new Array(3);
-                        var stVerts = new Array(3);
-                        for (var i=0; i<3; i++) {
-                            var vertIndex = tri.vertIndeces[i];
-                            var vert = frame.verts[vertIndex];
-                            vert = new Vec3(vert.x, vert.y, vert.z);
-                            vert = vert.applyAffineTransform(objToWorldMatrix);
-                            screenVerts[i] = worldToCanvas(vert);
-                            stVerts[i] = e.model.texCoords[vertIndex];
+                gl.clearColor(1, 1, 1, 1);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                vertices = [
+                    // -0.5, 0.5, 0.5,
+                    // 0.5, 0.5, 0.0,
+                    // 0.5, -0.5, 0.0,
+                    // -0.5, -0.5, 0.5
+                ];
+                if (scene.entities[0]) {
+                    var model = scene.entities[0].model;
+                    var frameverts = scene.entities[0].model.frames[$scope.frame].simpleFrame.verts;
+                    var vert;
+                    for (tri of model.triangles) {
+                        for (var v=0; v<3; v++) {
+                            vertices.push(frameverts[tri.vertIndeces[v]].x/50);
+                            vertices.push(frameverts[tri.vertIndeces[v]].y/50);
+                            vertices.push(frameverts[tri.vertIndeces[v]].z/50);
                         }
-                        rasterize(canvas.width, canvas.height, screenVerts, stVerts,
-                            tri.facesFront, e.model.skins[0].data.data);
-                    })
-                })
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                // fbuf.set(zbuf, 0);
-                ctx.putImageData(new ImageData(fbuf, canvas.width, canvas.height), 0, 0);
-                drawAxes(ctx);
-                recordRenderTime(Date.now() - start);
-                drawFps(ctx);
+                    }
+                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+                    gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+                    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+                }
                 window.requestAnimationFrame(render);
+                return;
             }
             window.requestAnimationFrame(render);
             $scope.$watchGroup(['model', 'frame', 'pos'], (newvals) => {
