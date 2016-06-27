@@ -254,64 +254,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var scene = {
                 entities: []
             };
-            var cam = {
-                // all 0s means looking along Z+ (with Y+ up and X+ right)
-                angles: [3*Math.PI/2, Math.PI/2],
-                pos: [0, 0, -50]
-            };
-            var yaw = cam.angles[0];
-            var yawMatrix = [
-                [Math.cos(yaw), 0, -Math.sin(yaw)],
-                [0, 1, 0],
-                [Math.sin(yaw), 0, Math.cos(yaw)]
-            ];
-            var pitch = cam.angles[1];
-            var pitchMatrix = [
-                [1, 0, 0],
-                [0, Math.cos(pitch), -Math.sin(pitch)],
-                [0, Math.sin(pitch), Math.cos(pitch)]
-            ];
-            var worldToCameraRotMatrix = m33timesm33(yawMatrix, pitchMatrix);
-            // TODO: this rotates the world, then translates it--it should do the opposite
-            var worldToCameraMatrix = [
-                worldToCameraRotMatrix[0].concat(-cam.pos[0]),
-                worldToCameraRotMatrix[1].concat(-cam.pos[1]),
-                worldToCameraRotMatrix[2].concat(-cam.pos[2])
-            ];
-            var zNear = -2;
-            var zFar = 2;
-            var camToClipMatrix = [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, zFar / (zFar - zNear), zFar * -zNear / (zFar - zNear)],
-                [0, 0, 1, 0]
-            ];
             var canvas = $element.find('canvas')[0];
-            var renderTimes = [];
-            function recordRenderTime(t){
-                renderTimes.push(t);
-                while (renderTimes.length > 10) renderTimes.shift();
-            }
-            function drawFps(ctx){
-                ctx.fillStyle = 'red';
-                ctx.font = '10px sans-serif';
-                var fpstext = Math.floor(1000 / mean(renderTimes)).toString();
-                ctx.fillText(fpstext, 10, 20);
-            }
-            function worldToCanvas(vert){
-                vert = vert.applyAffineTransform(worldToCameraMatrix);
-                var vertHomog = [vert.x, vert.y, vert.z, 1];
-                vertHomog = vecTimesMatrix(vertHomog, camToClipMatrix);
-                vert = homog4dTo3d(vertHomog);
-                // clip space is x: [-1, 1], y: [-1, 1], z: [0, 1]
-                vert = [
-                    canvas.width / 2 * (vert[0] + 1),
-                    canvas.height / 2 * (-vert[1] + 1),
-                    vert[2]
-                ];
-                return vert;
-            }
-
             var gl = canvas.getContext('webgl');
             gl.enable(gl.DEPTH_TEST);
 
