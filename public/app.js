@@ -238,16 +238,10 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         },
         template: '<canvas></canvas>',
         link: function($scope, $element){
-            var zbuf;
-            var fbuf;
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
                 $element.find('canvas').attr('width', w).attr('height', h);
-                // giving 4 bytes per pixel is 4x as much space as is necessary--but it's
-                // worth it for a huge speedup in drawing it to the framebuffer
-                zbuf = new Uint8ClampedArray(4*w*h);
-                fbuf = new Uint8ClampedArray(4*w*h);
             }
             sizeCanvasToContainer();
             $(window).on('resize', sizeCanvasToContainer);
@@ -367,11 +361,6 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
             gl.enableVertexAttribArray(vertexPositionAttribute);
             var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
-            // this identity matrix is an orthographic projection. if we change
-            // it to perspective, we'll need to know the location of the near and
-            // far z-clipping planes--this means we'll need a camera location, and
-            // it definitely shouldn't be at the origin because that's about where
-            // this model is located.
             gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
             var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
