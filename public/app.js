@@ -311,23 +311,70 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 ];
                 return vert;
             }
-            function drawAxes(ctx){
-                _.each(['red', 'green', 'blue'], (color, i) => {
-                    var lineSegWorld = [[0, 0, 0], [0, 0, 0]];
-                    lineSegWorld[1][i] = 10;
-                    ctx.beginPath();
-                    ctx.strokeStyle = color;
-                    _.each(lineSegWorld, (vert, i) => {
-                        vert = new Vec3(vert[0], vert[1], vert[2]);
-                        vert = worldToCanvas(vert);
-                        ctx[i == 0 ? 'moveTo' : 'lineTo'](vert[0], vert[1]);
-                    })
-                    ctx.stroke();
-                    ctx.closePath();
-                })
-            }
+
             var gl = canvas.getContext('webgl');
             gl.enable(gl.DEPTH_TEST);
+
+            // buffer axes
+            var axesbuf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
+            var axisverts = [ // x,y,z,r,g,b
+                0, 0, 0, 1, 0, 0,
+                1, 0, 0, 1, 0, 0,
+                0, 0, 0, 0, 1, 0,
+                0, 1, 0, 0, 1, 0,
+                0, 0, 0, 0, 0, 1,
+                0, 0, 1, 0, 0, 1
+            ];
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
+            var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(axisvertshader, `
+                attribute vec3 aVertexPos;
+                attribute vec3 aVertexColor;
+                uniform mat4 matrix;
+                varying lowp vec4 vcolor;
+                void main(void) {
+                    gl_Position = matrix * vec4(aVertexPos, 1.0);
+                    vcolor = vec4(aVertexColor, 0.0);
+                }
+            `);
+            gl.compileShader(axisvertshader);
+            if (!gl.getShaderParameter(axisvertshader, gl.COMPILE_STATUS))
+                throw new Error(gl.getShaderInfoLog(axisvertshader));
+            var axisfragshader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(axisfragshader, `
+                varying lowp vec4 vcolor;
+                void main(void) {
+                    gl_FragColor = vcolor;
+                }
+            `);
+            gl.compileShader(axisfragshader);
+            if (!gl.getShaderParameter(axisfragshader, gl.COMPILE_STATUS))
+                throw new Error(gl.getShaderInfoLog(axisfragshader));
+            var axisShaderProgram = gl.createProgram();
+            gl.attachShader(axisShaderProgram, axisvertshader);
+            gl.attachShader(axisShaderProgram, axisfragshader);
+            gl.linkProgram(axisShaderProgram);
+            gl.useProgram(axisShaderProgram);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
+            var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
+            gl.enableVertexAttribArray(axisvertexposatt);
+            var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
+            gl.enableVertexAttribArray(axisvertcoloratt);
+            var perspectiveMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+            var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
+            gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
+
+            function drawAxes(ctx){
+                gl.useProgram(axisShaderProgram);
+                gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
+                gl.vertexAttribPointer(axisvertexposatt, 3, gl.FLOAT, false, 6*4, 0);
+                gl.vertexAttribPointer(axisvertcoloratt, 3, gl.FLOAT, false, 6*4, 3*4);
+                gl.drawArrays(gl.LINES, 0, 6);
+            }
+
             // vert shader:
             var vertshader = gl.createShader(gl.VERTEX_SHADER);
             gl.shaderSource(vertshader, `
@@ -365,24 +412,15 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             // far z-clipping planes--this means we'll need a camera location, and
             // it definitely shouldn't be at the origin because that's about where
             // this model is located.
-            gl.uniformMatrix4fv(matrixUniform, false, new Float32Array([
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1
-            ]));
+            gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
             // vertex buffer:
             var buf = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             function render(){
                 gl.clearColor(1, 1, 1, 1);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                vertices = [
-                    // -0.5, 0.5, 0.5,
-                    // 0.5, 0.5, 0.0,
-                    // 0.5, -0.5, 0.0,
-                    // -0.5, -0.5, 0.5
-                ];
+                gl.useProgram(shaderProgram);
+                vertices = [];
                 if (scene.entities[0]) {
                     var model = scene.entities[0].model;
                     var frameverts = scene.entities[0].model.frames[$scope.frame].simpleFrame.verts;
@@ -394,13 +432,14 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                             vertices.push(frameverts[tri.vertIndeces[v]].z/50);
                         }
                     }
+                    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
                     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
                     gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-
+                    gl.useProgram(shaderProgram);
                     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
                 }
+                drawAxes();
                 window.requestAnimationFrame(render);
-                return;
             }
             window.requestAnimationFrame(render);
             $scope.$watchGroup(['model', 'frame', 'pos'], (newvals) => {
