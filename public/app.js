@@ -332,9 +332,10 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 attribute vec3 aVertexPos;
                 attribute vec3 aVertexColor;
                 uniform mat4 matrix;
+                uniform mat4 camSpaceMatrix;
                 varying lowp vec4 vcolor;
                 void main(void) {
-                    gl_Position = matrix * vec4(aVertexPos, 1.0);
+                    gl_Position = matrix * camSpaceMatrix * vec4(aVertexPos, 1.0);
                     vcolor = vec4(aVertexColor, 0.0);
                 }
             `);
@@ -363,9 +364,24 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             gl.enableVertexAttribArray(axisvertexposatt);
             var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
             gl.enableVertexAttribArray(axisvertcoloratt);
-            var perspectiveMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+            var n = 0;
+            var f = 100;
+            var perspectiveMatrix = [
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, -(f+n)/(f-n), 1,
+                0, 0, (2*f*n)/(f-n), 0
+            ];
+            var camSpaceMatrix = [
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 50, 1
+            ];
             var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
             gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
+            var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
+            gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
             function drawAxes(ctx){
                 gl.useProgram(axisShaderProgram);
@@ -380,8 +396,9 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             gl.shaderSource(vertshader, `
                 attribute vec3 aVertexPosition;
                 uniform mat4 matrix;
+                uniform mat4 camSpaceMatrix;
                 void main(void){
-                    gl_Position = matrix * vec4(aVertexPosition, 1.0);
+                    gl_Position = matrix * camSpaceMatrix * vec4(aVertexPosition, 1.0);
                 }
             `);
             gl.compileShader(vertshader);
@@ -413,6 +430,8 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             // it definitely shouldn't be at the origin because that's about where
             // this model is located.
             gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
+            var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
+            gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
             // vertex buffer:
             var buf = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -427,9 +446,9 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                     var vert;
                     for (tri of model.triangles) {
                         for (var v=0; v<3; v++) {
-                            vertices.push(frameverts[tri.vertIndeces[v]].x/50);
-                            vertices.push(frameverts[tri.vertIndeces[v]].y/50);
-                            vertices.push(frameverts[tri.vertIndeces[v]].z/50);
+                            vertices.push(frameverts[tri.vertIndeces[v]].x);
+                            vertices.push(frameverts[tri.vertIndeces[v]].y);
+                            vertices.push(frameverts[tri.vertIndeces[v]].z);
                         }
                     }
                     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
