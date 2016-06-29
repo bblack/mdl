@@ -257,11 +257,11 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
             var axisverts = [ // x,y,z,r,g,b
                 0, 0, 0, 1, 0, 0,
-                1, 0, 0, 1, 0, 0,
+                10, 0, 0, 1, 0, 0,
                 0, 0, 0, 0, 1, 0,
-                0, 1, 0, 0, 1, 0,
+                0, 10, 0, 0, 1, 0,
                 0, 0, 0, 0, 0, 1,
-                0, 0, 1, 0, 0, 1
+                0, 0, 10, 0, 0, 1
             ];
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
             var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
@@ -309,10 +309,10 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 0, 0, -(f+n)/(f-n), 1,
                 0, 0, (2*f*n)/(f-n), 0
             ];
-            var camSpaceMatrix = [
+            var camSpaceMatrix = [ // player.mdl has xy as floor
                 1, 0, 0, 0,
-                0, 1, 0, 0,
                 0, 0, 1, 0,
+                0, 1, 0, 0,
                 0, 0, 50, 1
             ];
             var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
