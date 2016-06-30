@@ -377,7 +377,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var tex = gl.createTexture();
 
             function render(){
-                gl.clearColor(1, 1, 1, 1);
+                gl.clearColor(0, 0, 0, 0);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 gl.useProgram(shaderProgram);
 
