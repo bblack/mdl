@@ -238,9 +238,11 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         },
         template: '<canvas></canvas>',
         link: function($scope, $element){
+            var aspect;
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
+                aspect = w/h;
                 $element.find('canvas').attr('width', w).attr('height', h);
             }
             sizeCanvasToContainer();
@@ -304,7 +306,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var n = 1;
             var f = 100;
             var perspectiveMatrix = [
-                1, 0, 0, 0,
+                1/aspect, 0, 0, 0,
                 0, 1, 0, 0,
                 0, 0, (f+n)/(f-n), 1,
                 0, 0, -(2*f*n)/(f-n), 0
