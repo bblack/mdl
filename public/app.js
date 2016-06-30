@@ -43,21 +43,21 @@ m.controller('ControlsController', function($scope, $interval, $rootScope){
 });
 
 m.controller('QuadViewController', function($scope, $rootScope, $http){
-    $http.get('player.mdl')
-    .then(function(res){
-        var model = $rootScope.model = res.data;
-        _.each(model.frames, (f) => {
-            _.each(f.simpleFrame.verts, (v) => {
-                v.x = v.x * model.scale[0] + model.translate[0];
-                v.y = v.y * model.scale[1] + model.translate[1];
-                v.z = v.z * model.scale[2] + model.translate[2];
-            })
-        })
-        $rootScope.frame = 0;
-    });
     $http.get('palette')
     .then(function(res){
         $rootScope.palette = res.data;
+        return $http.get('player.mdl')
+        .then(function(res){
+            var model = $rootScope.model = res.data;
+            _.each(model.frames, (f) => {
+                _.each(f.simpleFrame.verts, (v) => {
+                    v.x = v.x * model.scale[0] + model.translate[0];
+                    v.y = v.y * model.scale[1] + model.translate[1];
+                    v.z = v.z * model.scale[2] + model.translate[2];
+                })
+            })
+            $rootScope.frame = 0;
+        });
     });
     $scope.camPos = [0, -150, -100];
 });
@@ -301,19 +301,19 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             gl.enableVertexAttribArray(axisvertexposatt);
             var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
             gl.enableVertexAttribArray(axisvertcoloratt);
-            var n = 0;
+            var n = 1;
             var f = 100;
             var perspectiveMatrix = [
                 1, 0, 0, 0,
                 0, 1, 0, 0,
-                0, 0, -(f+n)/(f-n), 1,
-                0, 0, (2*f*n)/(f-n), 0
+                0, 0, (f+n)/(f-n), 1,
+                0, 0, -(2*f*n)/(f-n), 0
             ];
             var camSpaceMatrix = [ // player.mdl has xy as floor
                 1, 0, 0, 0,
                 0, 0, 1, 0,
                 0, 1, 0, 0,
-                0, 0, 50, 1
+                0, 0, 40, 1
             ];
             var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
             gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
@@ -332,10 +332,13 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var vertshader = gl.createShader(gl.VERTEX_SHADER);
             gl.shaderSource(vertshader, `
                 attribute vec3 aVertexPosition;
+                attribute vec2 aVertexTexCoord;
                 uniform mat4 matrix;
                 uniform mat4 camSpaceMatrix;
+                varying highp vec2 vTexCoord;
                 void main(void){
                     gl_Position = matrix * camSpaceMatrix * vec4(aVertexPosition, 1.0);
+                    vTexCoord = aVertexTexCoord;
                 }
             `);
             gl.compileShader(vertshader);
@@ -345,8 +348,10 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             // frag shader:
             var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
             gl.shaderSource(fragshader, `
+                varying highp vec2 vTexCoord;
+                uniform sampler2D uSampler;
                 void main(void){
-                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                    gl_FragColor = texture2D(uSampler, vec2(vTexCoord.st));
                 }
             `);
             gl.compileShader(fragshader);
@@ -360,17 +365,26 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             gl.useProgram(shaderProgram);
             var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
             gl.enableVertexAttribArray(vertexPositionAttribute);
+            var vertexTexCoordAttribute = gl.getAttribLocation(shaderProgram, "aVertexTexCoord");
+            gl.enableVertexAttribArray(vertexTexCoordAttribute);
             var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
             gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
             var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
             // vertex buffer:
             var buf = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+
+            var tex = gl.createTexture();
+
             function render(){
                 gl.clearColor(1, 1, 1, 1);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 gl.useProgram(shaderProgram);
+
+                gl.activeTexture(gl.TEXTURE0); // w
+                gl.bindTexture(gl.TEXTURE_2D, tex); // t
+                gl.uniform1i(gl.getUniformLocation(shaderProgram, 'uSampler'), 0); // f
+
                 vertices = [];
                 if (scene.entities[0]) {
                     var model = scene.entities[0].model;
@@ -386,13 +400,48 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
                     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
                     gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, texcoordsbuf);
+                    gl.vertexAttribPointer(vertexTexCoordAttribute, 2, gl.FLOAT, false, 0, 0);
                     gl.useProgram(shaderProgram);
-                    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+                    gl.drawArrays(gl.TRIANGLES, 0, model.triangles.length * 3);
                 }
                 drawAxes();
                 window.requestAnimationFrame(render);
             }
             window.requestAnimationFrame(render);
+
+            var texcoordsbuf = gl.createBuffer();
+
+            $scope.$watch('model', (model) => {
+                if (!model) return;
+
+                gl.bindTexture(gl.TEXTURE_2D, tex);
+                var pixels = new Uint8Array(model.skinWidth * model.skinHeight * 4);
+                pixels.fill(0xff);
+                model.skins[0].data.data.forEach((palidx, pixnum) => {
+                    var rgb = $scope.$root.palette[palidx];
+                    pixels.set(rgb, pixnum * 4);
+                });
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, model.skinWidth, model.skinHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+                // these are required for non-power-of-2-size textures
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // NEAREST or LINEAR
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+
+                var uv;
+                var texcoords = [];
+                gl.bindBuffer(gl.ARRAY_BUFFER, texcoordsbuf);
+                for (tri of model.triangles) {
+                    for (var v=0; v<3; v++) {
+                        uv = model.texCoords[tri.vertIndeces[v]];
+                        texcoords.push((uv.s / model.skinWidth) +
+                            ((!tri.facesFront && uv.onSeam) ? 0.5 : 0));
+                        texcoords.push(uv.t / model.skinHeight);
+                    }
+                }
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
+            })
             $scope.$watchGroup(['model', 'frame', 'pos'], (newvals) => {
                 if (!newvals[0]) return;
                 scene.entities = [{model: newvals[0], frame: newvals[1], pos: newvals[2]}];
