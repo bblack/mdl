@@ -59,7 +59,6 @@ m.controller('QuadViewController', function($scope, $rootScope, $http){
             $rootScope.frame = 0;
         });
     });
-    $scope.camPos = [0, -150, -100];
 });
 
 m.service('MdlNorms', function($http){
@@ -89,7 +88,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         scope: {
             model: '=',
             frame: '=',
-            camPos: '='
+            mv: '='
         },
         template: '<canvas></canvas>',
         link: function($scope, $element){
@@ -166,12 +165,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 0, 0, (f+n)/(f-n), 1,
                 0, 0, -(2*f*n)/(f-n), 0
             ];
-            var camSpaceMatrix = [ // player.mdl has xy as floor
-                1, 0, 0, 0,
-                0, 0, 1, 0,
-                0, 1, 0, 0,
-                0, 0, 40, 1
-            ];
+            var camSpaceMatrix = $scope.mv;
             var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
             gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
             var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');

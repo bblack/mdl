@@ -111,13 +111,17 @@
             <hr/>
 
         </div><div id='quadview' ng-controller='QuadViewController'>
-            <perspective-projection class='pane n w' model='model' frame='frame'>
+            <perspective-projection class='pane n w' model='model' frame='frame'
+                mv='[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]'>
             </perspective-projection>
-            <perspective-projection class='pane n e' model='model' frame='frame'>
+            <perspective-projection class='pane n e' model='model' frame='frame'
+                mv='[0,0,1,0,  0,1,0,0,  1,0,0,0,  0,0,40,1]'>
             </perspective-projection>
-            <perspective-projection class='pane s w' model='model' frame='frame'>
+            <perspective-projection class='pane s w' model='model' frame='frame'
+                mv='[0,1,0,0,  1,0,0,0,  0,0,1,0,  0,0,40,1]'>
             </perspective-projection>
-            <perspective-projection class='pane s e' model='model' frame='frame'>
+            <perspective-projection class='pane s e' model='model' frame='frame'
+                mv='[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]'>
             </perspective-projection>
         </div>
     </body>
