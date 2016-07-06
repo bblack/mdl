@@ -111,11 +111,13 @@
             <hr/>
 
         </div><div id='quadview' ng-controller='QuadViewController'>
-            <linear-projection class='pane n w' model='model' frame='frame' projection-matrix='[[4, 0, 0, 0],[0, 0, -4, 800]]'></linear-projection>
-            <linear-projection class='pane n e' model='model' frame='frame' projection-matrix='[[0, 4, 0, 0],[0, 0, -4, 800]]'></linear-projection>
-            <linear-projection class='pane s w' model='model' frame='frame' projection-matrix='[[4, 0, 0, 0],[0, -4, 0, 800]]'></linear-projection>
-            <perspective-projection class='pane s e'
-                model='model' frame='frame'>
+            <perspective-projection class='pane n w' model='model' frame='frame'>
+            </perspective-projection>
+            <perspective-projection class='pane n e' model='model' frame='frame'>
+            </perspective-projection>
+            <perspective-projection class='pane s w' model='model' frame='frame'>
+            </perspective-projection>
+            <perspective-projection class='pane s e' model='model' frame='frame'>
             </perspective-projection>
         </div>
     </body>
