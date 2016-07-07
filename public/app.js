@@ -142,6 +142,15 @@ angular.module('mdlr', [])
         gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
         gl.drawArrays(gl.LINES, 0, 6);
     }
+    function loadModelTexture(gl, tex, width, height, pixels){
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        // these are required for non-power-of-2-size textures
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // NEAREST or LINEAR
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
     return {
         restrict: 'E',
         scope: {
@@ -241,19 +250,13 @@ angular.module('mdlr', [])
             $scope.$watch('model', (model) => {
                 if (!model) return;
 
-                gl.bindTexture(gl.TEXTURE_2D, tex);
                 var pixels = new Uint8Array(model.skinWidth * model.skinHeight * 4);
                 pixels.fill(0xff);
                 model.skins[0].data.data.forEach((palidx, pixnum) => {
                     var rgb = $scope.$root.palette[palidx];
                     pixels.set(rgb, pixnum * 4);
                 });
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, model.skinWidth, model.skinHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-                // these are required for non-power-of-2-size textures
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // NEAREST or LINEAR
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                gl.bindTexture(gl.TEXTURE_2D, null);
+                loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
 
                 var uv;
                 var texcoords = [];
