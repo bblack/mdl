@@ -151,6 +151,19 @@ angular.module('mdlr', [])
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
+    function bufferTexCoords(gl, buf, mdlTris, mdlTexCoords, width, height){
+        var texcoords = [];
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        for (tri of mdlTris) {
+            for (var v=0; v<3; v++) {
+                var uv = mdlTexCoords[tri.vertIndeces[v]];
+                texcoords.push((uv.s / width) +
+                    ((!tri.facesFront && uv.onSeam) ? 0.5 : 0));
+                texcoords.push(uv.t / height);
+            }
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
+    }
     return {
         restrict: 'E',
         scope: {
@@ -257,19 +270,8 @@ angular.module('mdlr', [])
                     pixels.set(rgb, pixnum * 4);
                 });
                 loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
-
-                var uv;
-                var texcoords = [];
-                gl.bindBuffer(gl.ARRAY_BUFFER, texcoordsbuf);
-                for (tri of model.triangles) {
-                    for (var v=0; v<3; v++) {
-                        uv = model.texCoords[tri.vertIndeces[v]];
-                        texcoords.push((uv.s / model.skinWidth) +
-                            ((!tri.facesFront && uv.onSeam) ? 0.5 : 0));
-                        texcoords.push(uv.t / model.skinHeight);
-                    }
-                }
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
+                bufferTexCoords(gl, texcoordsbuf, model.triangles,
+                    model.texCoords, model.skinWidth, model.skinHeight);
             })
             $scope.$watchGroup(['model', 'frame'], (newvals) => {
                 if (!newvals[0]) return;
