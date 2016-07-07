@@ -1,30 +1,3 @@
-function mean(vals){
-    var sum = 0;
-    for (i in vals) {
-        sum += vals[i];
-    }
-    return sum / vals.length;
-}
-function m33timesm33(m1, m2){
-    return [
-        [
-            Vec3.fromArray(m1[0]).dot([m2[0][0], m2[0][1], m2[0][2]]),
-            Vec3.fromArray(m1[0]).dot([m2[1][0], m2[1][1], m2[1][2]]),
-            Vec3.fromArray(m1[0]).dot([m2[2][0], m2[2][1], m2[2][2]]),
-        ],
-        [
-            Vec3.fromArray(m1[1]).dot([m2[0][0], m2[0][1], m2[0][2]]),
-            Vec3.fromArray(m1[1]).dot([m2[1][0], m2[1][1], m2[1][2]]),
-            Vec3.fromArray(m1[1]).dot([m2[2][0], m2[2][1], m2[2][2]]),
-        ],
-        [
-            Vec3.fromArray(m1[2]).dot([m2[0][0], m2[0][1], m2[0][2]]),
-            Vec3.fromArray(m1[2]).dot([m2[1][0], m2[1][1], m2[1][2]]),
-            Vec3.fromArray(m1[2]).dot([m2[2][0], m2[2][1], m2[2][2]]),
-        ]
-    ]
-}
-
 m = angular.module('mdlr', []);
 
 m.controller('ControlsController', function($scope, $interval, $rootScope){
