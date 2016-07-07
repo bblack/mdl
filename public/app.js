@@ -245,11 +245,10 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 gl.uniform1i(gl.getUniformLocation(shaderProgram, 'uSampler'), 0); // f
 
                 vertices = [];
-                if (scene.entities[0]) {
-                    var model = scene.entities[0].model;
-                    var frameverts = scene.entities[0].model.frames[$scope.frame].simpleFrame.verts;
-                    var vert;
-                    for (tri of model.triangles) {
+                for (var ent of scene.entities) {
+                    var mdl = ent.model;
+                    var frameverts = mdl.frames[$scope.frame].simpleFrame.verts;
+                    for (tri of mdl.triangles) {
                         for (var v=0; v<3; v++) {
                             vertices.push(frameverts[tri.vertIndeces[v]].x);
                             vertices.push(frameverts[tri.vertIndeces[v]].y);
@@ -262,7 +261,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                     gl.bindBuffer(gl.ARRAY_BUFFER, texcoordsbuf);
                     gl.vertexAttribPointer(vertexTexCoordAttribute, 2, gl.FLOAT, false, 0, 0);
                     gl.useProgram(shaderProgram);
-                    gl.drawArrays(gl.TRIANGLES, 0, model.triangles.length * 3);
+                    gl.drawArrays(gl.TRIANGLES, 0, mdl.triangles.length * 3);
                 }
                 drawAxes();
                 window.requestAnimationFrame(render);
@@ -301,9 +300,9 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 }
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
             })
-            $scope.$watchGroup(['model', 'frame', 'pos'], (newvals) => {
+            $scope.$watchGroup(['model', 'frame'], (newvals) => {
                 if (!newvals[0]) return;
-                scene.entities = [{model: newvals[0], frame: newvals[1], pos: newvals[2]}];
+                scene.entities = [{model: newvals[0], frame: newvals[1]}];
             });
         }
     }
