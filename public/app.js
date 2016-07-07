@@ -162,19 +162,19 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         template: '<canvas></canvas>',
         link: function($scope, $element){
             var aspect;
+            var $canvas = $element.find('canvas');
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
                 aspect = w/h;
-                $element.find('canvas').attr('width', w).attr('height', h);
+                $canvas.attr('width', w).attr('height', h);
             }
             sizeCanvasToContainer();
             $(window).on('resize', sizeCanvasToContainer);
             var scene = {
                 entities: []
             };
-            var canvas = $element.find('canvas')[0];
-            var gl = canvas.getContext('webgl');
+            var gl = $canvas[0].getContext('webgl');
             gl.enable(gl.DEPTH_TEST);
 
             // buffer axes
