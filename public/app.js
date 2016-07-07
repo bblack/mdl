@@ -152,6 +152,20 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         gl.linkProgram(shaderProgram);
         return shaderProgram;
     }
+    function bufferAxes(gl){
+        var axesbuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
+        var axisverts = [ // x,y,z,r,g,b
+            0, 0, 0, 1, 0, 0,
+            10, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 1, 0,
+            0, 10, 0, 0, 1, 0,
+            0, 0, 0, 0, 0, 1,
+            0, 0, 10, 0, 0, 1
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
+        return axesbuf;
+    }
     return {
         restrict: 'E',
         scope: {
@@ -177,23 +191,10 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var gl = $canvas[0].getContext('webgl');
             gl.enable(gl.DEPTH_TEST);
 
-            // buffer axes
-            var axesbuf = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
-            var axisverts = [ // x,y,z,r,g,b
-                0, 0, 0, 1, 0, 0,
-                10, 0, 0, 1, 0, 0,
-                0, 0, 0, 0, 1, 0,
-                0, 10, 0, 0, 1, 0,
-                0, 0, 0, 0, 0, 1,
-                0, 0, 10, 0, 0, 1
-            ];
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
+            var axesbuf = bufferAxes(gl);
             var axisShaderProgram = createAxisShaderProgram(gl);
             gl.useProgram(axisShaderProgram);
 
-            gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
             var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
             gl.enableVertexAttribArray(axisvertexposatt);
             var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
