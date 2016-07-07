@@ -219,9 +219,8 @@ angular.module('mdlr', [])
                     var frameverts = mdl.frames[$scope.frame].simpleFrame.verts;
                     for (tri of mdl.triangles) {
                         for (var v=0; v<3; v++) {
-                            vertices.push(frameverts[tri.vertIndeces[v]].x);
-                            vertices.push(frameverts[tri.vertIndeces[v]].y);
-                            vertices.push(frameverts[tri.vertIndeces[v]].z);
+                            var vert = frameverts[tri.vertIndeces[v]];
+                            vertices.push(vert.x, vert.y, vert.z);
                         }
                     }
                     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
