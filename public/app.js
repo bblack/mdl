@@ -166,6 +166,13 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
         return axesbuf;
     }
+    function drawAxes(gl, shaderProgram, buf, vPosAtt, vColorAtt){
+        gl.useProgram(shaderProgram);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.vertexAttribPointer(vPosAtt, 3, gl.FLOAT, false, 6*4, 0);
+        gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
+        gl.drawArrays(gl.LINES, 0, 6);
+    }
     return {
         restrict: 'E',
         scope: {
@@ -213,14 +220,6 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
-            function drawAxes(){
-                gl.useProgram(axisShaderProgram);
-                gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
-                gl.vertexAttribPointer(axisvertexposatt, 3, gl.FLOAT, false, 6*4, 0);
-                gl.vertexAttribPointer(axisvertcoloratt, 3, gl.FLOAT, false, 6*4, 3*4);
-                gl.drawArrays(gl.LINES, 0, 6);
-            }
-
             var shaderProgram = createModelShaderProgram(gl);
             gl.useProgram(shaderProgram);
             var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
@@ -264,7 +263,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                     gl.useProgram(shaderProgram);
                     gl.drawArrays(gl.TRIANGLES, 0, mdl.triangles.length * 3);
                 }
-                drawAxes();
+                drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
                 window.requestAnimationFrame(render);
             }
             window.requestAnimationFrame(render);
