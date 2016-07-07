@@ -83,6 +83,75 @@ m.service('MdlNorms', function($http){
 });
 
 m.directive('perspectiveProjection', function($interval, MdlNorms){
+    function createAxisShaderProgram(gl){
+        var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(axisvertshader, `
+            attribute vec3 aVertexPos;
+            attribute vec3 aVertexColor;
+            uniform mat4 matrix;
+            uniform mat4 camSpaceMatrix;
+            varying lowp vec4 vcolor;
+            void main(void) {
+                gl_Position = matrix * camSpaceMatrix * vec4(aVertexPos, 1.0);
+                vcolor = vec4(aVertexColor, 0.0);
+            }
+        `);
+        gl.compileShader(axisvertshader);
+        if (!gl.getShaderParameter(axisvertshader, gl.COMPILE_STATUS))
+            throw new Error(gl.getShaderInfoLog(axisvertshader));
+        var axisfragshader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(axisfragshader, `
+            varying lowp vec4 vcolor;
+            void main(void) {
+                gl_FragColor = vcolor;
+            }
+        `);
+        gl.compileShader(axisfragshader);
+        if (!gl.getShaderParameter(axisfragshader, gl.COMPILE_STATUS))
+            throw new Error(gl.getShaderInfoLog(axisfragshader));
+        var axisShaderProgram = gl.createProgram();
+        gl.attachShader(axisShaderProgram, axisvertshader);
+        gl.attachShader(axisShaderProgram, axisfragshader);
+        gl.linkProgram(axisShaderProgram);
+        return axisShaderProgram;
+    }
+    function createModelShaderProgram(gl){
+        // vert shader:
+        var vertshader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertshader, `
+            attribute vec3 aVertexPosition;
+            attribute vec2 aVertexTexCoord;
+            uniform mat4 matrix;
+            uniform mat4 camSpaceMatrix;
+            varying highp vec2 vTexCoord;
+            void main(void){
+                gl_Position = matrix * camSpaceMatrix * vec4(aVertexPosition, 1.0);
+                vTexCoord = aVertexTexCoord;
+            }
+        `);
+        gl.compileShader(vertshader);
+        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(vertshader));
+        }
+        // frag shader:
+        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragshader, `
+            varying highp vec2 vTexCoord;
+            uniform sampler2D uSampler;
+            void main(void){
+                gl_FragColor = texture2D(uSampler, vec2(vTexCoord.st));
+            }
+        `);
+        gl.compileShader(fragshader);
+        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(fragshader));
+        }
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertshader);
+        gl.attachShader(shaderProgram, fragshader);
+        gl.linkProgram(shaderProgram);
+        return shaderProgram;
+    }
     return {
         restrict: 'E',
         scope: {
@@ -120,35 +189,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 0, 0, 10, 0, 0, 1
             ];
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
-            var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
-            gl.shaderSource(axisvertshader, `
-                attribute vec3 aVertexPos;
-                attribute vec3 aVertexColor;
-                uniform mat4 matrix;
-                uniform mat4 camSpaceMatrix;
-                varying lowp vec4 vcolor;
-                void main(void) {
-                    gl_Position = matrix * camSpaceMatrix * vec4(aVertexPos, 1.0);
-                    vcolor = vec4(aVertexColor, 0.0);
-                }
-            `);
-            gl.compileShader(axisvertshader);
-            if (!gl.getShaderParameter(axisvertshader, gl.COMPILE_STATUS))
-                throw new Error(gl.getShaderInfoLog(axisvertshader));
-            var axisfragshader = gl.createShader(gl.FRAGMENT_SHADER);
-            gl.shaderSource(axisfragshader, `
-                varying lowp vec4 vcolor;
-                void main(void) {
-                    gl_FragColor = vcolor;
-                }
-            `);
-            gl.compileShader(axisfragshader);
-            if (!gl.getShaderParameter(axisfragshader, gl.COMPILE_STATUS))
-                throw new Error(gl.getShaderInfoLog(axisfragshader));
-            var axisShaderProgram = gl.createProgram();
-            gl.attachShader(axisShaderProgram, axisvertshader);
-            gl.attachShader(axisShaderProgram, axisfragshader);
-            gl.linkProgram(axisShaderProgram);
+            var axisShaderProgram = createAxisShaderProgram(gl);
             gl.useProgram(axisShaderProgram);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
@@ -171,7 +212,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
             var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
-            function drawAxes(ctx){
+            function drawAxes(){
                 gl.useProgram(axisShaderProgram);
                 gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
                 gl.vertexAttribPointer(axisvertexposatt, 3, gl.FLOAT, false, 6*4, 0);
@@ -179,40 +220,7 @@ m.directive('perspectiveProjection', function($interval, MdlNorms){
                 gl.drawArrays(gl.LINES, 0, 6);
             }
 
-            // vert shader:
-            var vertshader = gl.createShader(gl.VERTEX_SHADER);
-            gl.shaderSource(vertshader, `
-                attribute vec3 aVertexPosition;
-                attribute vec2 aVertexTexCoord;
-                uniform mat4 matrix;
-                uniform mat4 camSpaceMatrix;
-                varying highp vec2 vTexCoord;
-                void main(void){
-                    gl_Position = matrix * camSpaceMatrix * vec4(aVertexPosition, 1.0);
-                    vTexCoord = aVertexTexCoord;
-                }
-            `);
-            gl.compileShader(vertshader);
-            if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
-                throw new Error(gl.getShaderInfoLog(vertshader));
-            }
-            // frag shader:
-            var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
-            gl.shaderSource(fragshader, `
-                varying highp vec2 vTexCoord;
-                uniform sampler2D uSampler;
-                void main(void){
-                    gl_FragColor = texture2D(uSampler, vec2(vTexCoord.st));
-                }
-            `);
-            gl.compileShader(fragshader);
-            if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
-                throw new Error(gl.getShaderInfoLog(fragshader));
-            }
-            var shaderProgram = gl.createProgram();
-            gl.attachShader(shaderProgram, vertshader);
-            gl.attachShader(shaderProgram, fragshader);
-            gl.linkProgram(shaderProgram);
+            var shaderProgram = createModelShaderProgram(gl);
             gl.useProgram(shaderProgram);
             var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
             gl.enableVertexAttribArray(vertexPositionAttribute);
