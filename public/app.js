@@ -1,6 +1,5 @@
-m = angular.module('mdlr', []);
-
-m.controller('ControlsController', function($scope, $interval, $rootScope){
+angular.module('mdlr', [])
+.controller('ControlsController', function($scope, $interval, $rootScope){
     $scope.play = function(){
         if ($scope.playing) { return; }
 
@@ -13,9 +12,8 @@ m.controller('ControlsController', function($scope, $interval, $rootScope){
         $interval.cancel($scope.playing);
         delete $scope.playing;
     };
-});
-
-m.controller('QuadViewController', function($scope, $rootScope, $http){
+})
+.controller('QuadViewController', function($scope, $rootScope, $http){
     $http.get('palette')
     .then(function(res){
         $rootScope.palette = res.data;
@@ -32,9 +30,8 @@ m.controller('QuadViewController', function($scope, $rootScope, $http){
             $rootScope.frame = 0;
         });
     });
-});
-
-m.service('MdlNorms', function($http){
+})
+.service('MdlNorms', function($http){
     var norms = []
 
     $http.get('/public/anorms.h').then(function(res){
@@ -53,9 +50,8 @@ m.service('MdlNorms', function($http){
     });
 
     return norms;
-});
-
-m.directive('perspectiveProjection', function($interval, MdlNorms){
+})
+.directive('perspectiveProjection', function($interval, MdlNorms){
     function createAxisShaderProgram(gl){
         var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(axisvertshader, `
