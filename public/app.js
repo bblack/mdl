@@ -175,13 +175,30 @@ angular.module('mdlr', [])
         link: function($scope, $element){
             var aspect;
             var $canvas = $element.find('canvas');
+            var n = 1;
+            var f = 100;
+            var perspectiveMatrix;
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
                 aspect = w/h;
                 $canvas.attr('width', w).attr('height', h);
+                perspectiveMatrix = [
+                    1/aspect, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, (f+n)/(f-n), 1,
+                    0, 0, -(2*f*n)/(f-n), 0
+                ];
+                if (gl) {
+                    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                    gl.useProgram(axisShaderProgram);
+                    var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
+                    gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
+                    gl.useProgram(shaderProgram);
+                    var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
+                    gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
+                }
             }
-            sizeCanvasToContainer();
             $(window).on('resize', sizeCanvasToContainer);
             var scene = {
                 entities: []
@@ -197,17 +214,7 @@ angular.module('mdlr', [])
             gl.enableVertexAttribArray(axisvertexposatt);
             var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
             gl.enableVertexAttribArray(axisvertcoloratt);
-            var n = 1;
-            var f = 100;
-            var perspectiveMatrix = [
-                1/aspect, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, (f+n)/(f-n), 1,
-                0, 0, -(2*f*n)/(f-n), 0
-            ];
             var camSpaceMatrix = $scope.mv;
-            var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
-            gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
             var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
@@ -217,8 +224,6 @@ angular.module('mdlr', [])
             gl.enableVertexAttribArray(vertexPositionAttribute);
             var vertexTexCoordAttribute = gl.getAttribLocation(shaderProgram, "aVertexTexCoord");
             gl.enableVertexAttribArray(vertexTexCoordAttribute);
-            var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
-            gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
             var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
             // vertex buffer:
@@ -258,6 +263,7 @@ angular.module('mdlr', [])
             }
             window.requestAnimationFrame(render);
 
+            sizeCanvasToContainer();
             var texcoordsbuf = gl.createBuffer();
 
             $scope.$watch('model', (model) => {
