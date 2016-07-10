@@ -530,19 +530,14 @@ angular.module('mdlr', [])
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
                     var frameverts = mdl.frames[$scope.frame].simpleFrame.verts;
-                    for (tri of mdl.triangles) {
-                        for (var v=0; v<3; v++) {
-                            var vFrom = frameverts[tri.vertIndeces[v]];
-                            var vTo = frameverts[tri.vertIndeces[(v+1) % 3]];
-                            vertices.push(vFrom.x, vFrom.y, vFrom.z,
-                                vTo.x, vTo.y, vTo.z);
-                        }
+                    for (vert of frameverts) {
+                        vertices.push(vert.x, vert.y, vert.z);
                     }
                     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
                     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
                     gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
                     gl.useProgram(shaderProgram);
-                    gl.drawArrays(gl.LINES, 0, mdl.triangles.length * 3 * 2);
+                    gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
                 }
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
                 if (closestVert)
@@ -553,10 +548,22 @@ angular.module('mdlr', [])
 
             sizeCanvasToContainer();
 
+            var vertIndexBuffer = gl.createBuffer();
             $scope.$watchGroup(['model', 'frame'], (newvals) => {
                 if (!newvals[0]) return;
                 scene.entities = [{model: newvals[0], frame: newvals[1]}];
             });
+            $scope.$watch('model', (model) => {
+                if (!model) return;
+                var vertIndeces = [];
+                for (var tri of model.triangles) {
+                    vertIndeces.push(tri.vertIndeces[0], tri.vertIndeces[1],
+                        tri.vertIndeces[1], tri.vertIndeces[2],
+                        tri.vertIndeces[2], tri.vertIndeces[0]);
+                }
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
+            })
         }
     }
 })
