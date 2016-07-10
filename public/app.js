@@ -412,9 +412,9 @@ angular.module('mdlr', [])
     }
     function drawCV(gl, shaderProgram, buf, vertPosAtt){
         gl.useProgram(shaderProgram);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
         gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.POINTS, 0, 1);
+        gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 0);
     }
     return {
         restrict: 'E',
@@ -461,8 +461,8 @@ angular.module('mdlr', [])
             }
             $(window).on('resize', sizeCanvasToContainer);
 
-            var closestVertBuf = gl.createBuffer();
-            var closestVert;
+            var closestVertIndexBuf = gl.createBuffer();
+            var closestVertIndex;
             $canvas.on('mousemove', (evt) => {
                 var cursorNDC = [
                     evt.offsetX / $canvas.width() * 2 - 1,
@@ -471,8 +471,8 @@ angular.module('mdlr', [])
                 var closestVertDist = Infinity;
                 for (var ent of scene.entities) {
                     var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
-                    // debugger;
-                    for (var vert of verts) {
+                    for (var i=0; i<verts.length; i++) {
+                        var vert = verts[i];
                         var vertNDC = [vert.x, vert.y, vert.z, 1];
                         vertNDC = v4Timesm4(vertNDC, camSpaceMatrix);
                         vertNDC = v4Timesm4(vertNDC, projectionMatrix);
@@ -485,13 +485,12 @@ angular.module('mdlr', [])
                             Math.pow(cursorNDC[1] - vertNDC[1], 2);
                         if (dist < closestVertDist) {
                             closestVertDist = dist;
-                            closestVert = [vert.x, vert.y, vert.z];
+                            closestVertIndex = i;
                         }
                     }
                 }
-                // debugger;
-                gl.bindBuffer(gl.ARRAY_BUFFER, closestVertBuf);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(closestVert), gl.STATIC_DRAW);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, closestVertIndexBuf);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([closestVertIndex]), gl.STATIC_DRAW);
             })
             gl.enable(gl.DEPTH_TEST);
 
@@ -536,12 +535,13 @@ angular.module('mdlr', [])
                     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
                     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
                     gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
                     gl.useProgram(shaderProgram);
                     gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
                 }
+                if (closestVertIndex !== undefined)
+                    drawCV(gl, cvShaderProgram, closestVertIndexBuf, cvPosAtt);
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
-                if (closestVert)
-                    drawCV(gl, cvShaderProgram, closestVertBuf, cvPosAtt);
                 window.requestAnimationFrame(render);
             }
             window.requestAnimationFrame(render);
