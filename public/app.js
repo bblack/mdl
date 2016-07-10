@@ -1,3 +1,12 @@
+function v4Timesm4(v4, m4){
+    return [
+        v4[0]*m4[0] + v4[1]*m4[4] + v4[2]*m4[8] + v4[3]*m4[12],
+        v4[0]*m4[1] + v4[1]*m4[5] + v4[2]*m4[9] + v4[3]*m4[13],
+        v4[0]*m4[2] + v4[1]*m4[6] + v4[2]*m4[10] + v4[3]*m4[14],
+        v4[0]*m4[3] + v4[1]*m4[7] + v4[2]*m4[11] + v4[3]*m4[15],
+    ];
+}
+
 angular.module('mdlr', [])
 .controller('ControlsController', function($scope, $interval, $rootScope){
     $scope.play = function(){
@@ -349,6 +358,37 @@ angular.module('mdlr', [])
         gl.linkProgram(shaderProgram);
         return shaderProgram;
     }
+    function createClosestVertShaderProgram(gl){
+        var vertshader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertshader, `
+            attribute vec3 aVertPos;
+            uniform mat4 projMatrix;
+            uniform mat4 camSpaceMatrix;
+            void main(void){
+                gl_Position = projMatrix * camSpaceMatrix * vec4(aVertPos, 1.0);
+                gl_PointSize = 8.0;
+            }
+        `);
+        gl.compileShader(vertshader);
+        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(vertshader));
+        }
+        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragshader, `
+            void main(void){
+                gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            }
+        `);
+        gl.compileShader(fragshader);
+        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(fragshader));
+        }
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertshader);
+        gl.attachShader(shaderProgram, fragshader);
+        gl.linkProgram(shaderProgram);
+        return shaderProgram;
+    }
     function bufferAxes(gl){
         var axesbuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
@@ -370,6 +410,12 @@ angular.module('mdlr', [])
         gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
         gl.drawArrays(gl.LINES, 0, 6);
     }
+    function drawCV(gl, shaderProgram, buf, vertPosAtt){
+        gl.useProgram(shaderProgram);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.POINTS, 0, 1);
+    }
     return {
         restrict: 'E',
         scope: {
@@ -384,6 +430,11 @@ angular.module('mdlr', [])
             var n = 1;
             var f = 100;
             var projectionMatrix;
+            var camSpaceMatrix = $scope.mv;
+            var scene = {
+                entities: []
+            };
+            var gl = $canvas[0].getContext('webgl');
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
@@ -397,6 +448,9 @@ angular.module('mdlr', [])
                 ];
                 if (gl) {
                     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                    gl.useProgram(cvShaderProgram);
+                    var cvProjMatrixU = gl.getUniformLocation(cvShaderProgram, 'projMatrix');
+                    gl.uniformMatrix4fv(cvProjMatrixU, false, new Float32Array(projectionMatrix));
                     gl.useProgram(axisShaderProgram);
                     var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
                     gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
@@ -406,21 +460,55 @@ angular.module('mdlr', [])
                 }
             }
             $(window).on('resize', sizeCanvasToContainer);
-            var scene = {
-                entities: []
-            };
-            var gl = $canvas[0].getContext('webgl');
+
+            var closestVertBuf = gl.createBuffer();
+            var closestVert;
+            $canvas.on('mousemove', (evt) => {
+                var cursorNDC = [
+                    evt.offsetX / $canvas.width() * 2 - 1,
+                    -(evt.offsetY / $canvas.height() * 2 - 1)
+                ];
+                var closestVertDist = Infinity;
+                for (var ent of scene.entities) {
+                    var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
+                    // debugger;
+                    for (var vert of verts) {
+                        var vertNDC = [vert.x, vert.y, vert.z, 1];
+                        vertNDC = v4Timesm4(vertNDC, camSpaceMatrix);
+                        vertNDC = v4Timesm4(vertNDC, projectionMatrix);
+                        vertNDC = [
+                            vertNDC[0] / vertNDC[3],
+                            vertNDC[1] / vertNDC[3],
+                            vertNDC[2] / vertNDC[3]
+                        ];
+                        var dist = Math.pow(cursorNDC[0] - vertNDC[0], 2) +
+                            Math.pow(cursorNDC[1] - vertNDC[1], 2);
+                        if (dist < closestVertDist) {
+                            closestVertDist = dist;
+                            closestVert = [vert.x, vert.y, vert.z];
+                        }
+                    }
+                }
+                // debugger;
+                gl.bindBuffer(gl.ARRAY_BUFFER, closestVertBuf);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(closestVert), gl.STATIC_DRAW);
+            })
             gl.enable(gl.DEPTH_TEST);
+
+            var cvShaderProgram = createClosestVertShaderProgram(gl);
+            gl.useProgram(cvShaderProgram);
+            var cvPosAtt = gl.getAttribLocation(cvShaderProgram, 'aVertPos');
+            gl.enableVertexAttribArray(cvPosAtt);
+            var cvCamSpaceMatrixU = gl.getUniformLocation(cvShaderProgram, 'camSpaceMatrix');
+            gl.uniformMatrix4fv(cvCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
 
             var axesbuf = bufferAxes(gl);
             var axisShaderProgram = createAxisShaderProgram(gl);
             gl.useProgram(axisShaderProgram);
-
             var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
             gl.enableVertexAttribArray(axisvertexposatt);
             var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
             gl.enableVertexAttribArray(axisvertcoloratt);
-            var camSpaceMatrix = $scope.mv;
             var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
             gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
@@ -457,6 +545,8 @@ angular.module('mdlr', [])
                     gl.drawArrays(gl.LINES, 0, mdl.triangles.length * 3 * 2);
                 }
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
+                if (closestVert)
+                    drawCV(gl, cvShaderProgram, closestVertBuf, cvPosAtt);
                 window.requestAnimationFrame(render);
             }
             window.requestAnimationFrame(render);
