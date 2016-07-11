@@ -357,7 +357,7 @@ angular.module('mdlr', [])
         gl.linkProgram(shaderProgram);
         return shaderProgram;
     }
-    function createClosestVertShaderProgram(gl){
+    function createSelectedVertShaderProgram(gl){
         var vertshader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(vertshader, `
             attribute vec3 aVertPos;
@@ -447,9 +447,9 @@ angular.module('mdlr', [])
                     0, 0, 0, 40
                 ];
                 gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-                gl.useProgram(cvShaderProgram);
-                var cvProjMatrixU = gl.getUniformLocation(cvShaderProgram, 'projMatrix');
-                gl.uniformMatrix4fv(cvProjMatrixU, false, new Float32Array(projectionMatrix));
+                gl.useProgram(svShaderProgram);
+                var svProjMatrixU = gl.getUniformLocation(svShaderProgram, 'projMatrix');
+                gl.uniformMatrix4fv(svProjMatrixU, false, new Float32Array(projectionMatrix));
                 gl.useProgram(axisShaderProgram);
                 var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
                 gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
@@ -457,15 +457,13 @@ angular.module('mdlr', [])
                 var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
                 gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
             }
-            $(window).on('resize', sizeCanvasToContainer);
-
-            var closestVertIndexBuf = gl.createBuffer();
-            $scope.onCanvasMousemove = (evt) => {
+            function getClosestVert(x, y){
                 var cursorNDC = [
-                    evt.offsetX / $canvas.width() * 2 - 1,
-                    -(evt.offsetY / $canvas.height() * 2 - 1)
+                    x / $canvas.width() * 2 - 1,
+                    -(y / $canvas.height() * 2 - 1)
                 ];
                 var closestVertDist = Infinity;
+                var closestVertIndex;
                 for (var ent of scene.entities) {
                     var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
                     for (var i=0; i<verts.length; i++) {
@@ -482,21 +480,31 @@ angular.module('mdlr', [])
                             Math.pow(cursorNDC[1] - vertNDC[1], 2);
                         if (dist < closestVertDist) {
                             closestVertDist = dist;
-                            while ($scope.selectedVerts.length)
-                                $scope.selectedVerts.pop();
-                            $scope.selectedVerts.push(i);
+                            closestVertIndex = i;
                         }
                     }
                 }
+                return closestVertIndex;
+            }
+
+            $(window).on('resize', sizeCanvasToContainer);
+
+            var selectedVertIndexBuf = gl.createBuffer();
+
+            $scope.onCanvasMousemove = (evt) => {
+                var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+                while ($scope.selectedVerts.length)
+                    $scope.selectedVerts.pop();
+                $scope.selectedVerts.push(closestVertIndex);
             };
             gl.enable(gl.DEPTH_TEST);
 
-            var cvShaderProgram = createClosestVertShaderProgram(gl);
-            gl.useProgram(cvShaderProgram);
-            var cvPosAtt = gl.getAttribLocation(cvShaderProgram, 'aVertPos');
-            gl.enableVertexAttribArray(cvPosAtt);
-            var cvCamSpaceMatrixU = gl.getUniformLocation(cvShaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(cvCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
+            var svShaderProgram = createSelectedVertShaderProgram(gl);
+            gl.useProgram(svShaderProgram);
+            var svPosAtt = gl.getAttribLocation(svShaderProgram, 'aVertPos');
+            gl.enableVertexAttribArray(svPosAtt);
+            var svCamSpaceMatrixU = gl.getUniformLocation(svShaderProgram, 'camSpaceMatrix');
+            gl.uniformMatrix4fv(svCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
 
             var axesbuf = bufferAxes(gl);
             var axisShaderProgram = createAxisShaderProgram(gl);
@@ -536,8 +544,8 @@ angular.module('mdlr', [])
                     gl.useProgram(shaderProgram);
                     gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
                 }
-                drawSelectedVerts(gl, cvShaderProgram, closestVertIndexBuf,
-                    cvPosAtt, $scope.selectedVerts.length);
+                drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
+                    svPosAtt, $scope.selectedVerts.length);
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
                 window.requestAnimationFrame(render);
             }
@@ -562,7 +570,7 @@ angular.module('mdlr', [])
                 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
             });
             $scope.$watchCollection('selectedVerts', (newval) => {
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, closestVertIndexBuf);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, selectedVertIndexBuf);
                 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(newval), gl.STATIC_DRAW);
             });
         }
