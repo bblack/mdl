@@ -541,7 +541,6 @@ angular.module('mdlr', [])
                     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
                     gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
                     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
-                    gl.useProgram(shaderProgram);
                     gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
                 }
                 drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
