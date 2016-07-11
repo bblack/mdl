@@ -188,6 +188,10 @@ angular.module('mdlr', [])
             var n = 1;
             var f = 100;
             var perspectiveMatrix;
+            var scene = {
+                entities: []
+            };
+            var gl = $canvas[0].getContext('webgl');
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
@@ -199,21 +203,15 @@ angular.module('mdlr', [])
                     0, 0, (f+n)/(f-n), 1,
                     0, 0, -(2*f*n)/(f-n), 0
                 ];
-                if (gl) {
-                    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-                    gl.useProgram(axisShaderProgram);
-                    var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
-                    gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
-                    gl.useProgram(shaderProgram);
-                    var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
-                    gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
-                }
+                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                gl.useProgram(axisShaderProgram);
+                var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
+                gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(perspectiveMatrix));
+                gl.useProgram(shaderProgram);
+                var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
+                gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(perspectiveMatrix));
             }
             $(window).on('resize', sizeCanvasToContainer);
-            var scene = {
-                entities: []
-            };
-            var gl = $canvas[0].getContext('webgl');
             gl.enable(gl.DEPTH_TEST);
 
             var axesbuf = bufferAxes(gl);
@@ -448,18 +446,16 @@ angular.module('mdlr', [])
                     0, 0, 0, 0,
                     0, 0, 0, 40
                 ];
-                if (gl) {
-                    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-                    gl.useProgram(cvShaderProgram);
-                    var cvProjMatrixU = gl.getUniformLocation(cvShaderProgram, 'projMatrix');
-                    gl.uniformMatrix4fv(cvProjMatrixU, false, new Float32Array(projectionMatrix));
-                    gl.useProgram(axisShaderProgram);
-                    var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
-                    gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
-                    gl.useProgram(shaderProgram);
-                    var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
-                    gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
-                }
+                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                gl.useProgram(cvShaderProgram);
+                var cvProjMatrixU = gl.getUniformLocation(cvShaderProgram, 'projMatrix');
+                gl.uniformMatrix4fv(cvProjMatrixU, false, new Float32Array(projectionMatrix));
+                gl.useProgram(axisShaderProgram);
+                var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
+                gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
+                gl.useProgram(shaderProgram);
+                var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
+                gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
             }
             $(window).on('resize', sizeCanvasToContainer);
 
