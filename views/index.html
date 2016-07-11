@@ -112,12 +112,15 @@
 
         </div><div id='quadview' ng-controller='QuadViewController'>
             <ortho-wire-projection class='pane n w' model='model' frame='frame'
+                selected-verts='selectedVerts'
                 mv='[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]'>
             </ortho-wire-projection>
             <ortho-wire-projection class='pane n e' model='model' frame='frame'
+                selected-verts='selectedVerts'
                 mv='[0,0,1,0,  1,0,0,0,  0,1,0,0,  0,0,40,1]'>
             </ortho-wire-projection>
             <ortho-wire-projection class='pane s w' model='model' frame='frame'
+                selected-verts='selectedVerts'
                 mv='[0,1,0,0,  -1,0,0,0,  0,0,1,0,  0,0,40,1]'>
             </ortho-wire-projection>
             <perspective-projection class='pane s e' model='model' frame='frame'

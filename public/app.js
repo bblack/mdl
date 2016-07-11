@@ -23,6 +23,7 @@ angular.module('mdlr', [])
     };
 })
 .controller('QuadViewController', function($scope, $rootScope, $http){
+    $scope.selectedVerts = [];
     $http.get('palette')
     .then(function(res){
         $rootScope.palette = res.data;
@@ -410,20 +411,21 @@ angular.module('mdlr', [])
         gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
         gl.drawArrays(gl.LINES, 0, 6);
     }
-    function drawCV(gl, shaderProgram, buf, vertPosAtt){
+    function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, numPoints){
         gl.useProgram(shaderProgram);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
         gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
-        gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
     }
     return {
         restrict: 'E',
         scope: {
             model: '=',
             frame: '=',
-            mv: '='
+            mv: '=',
+            selectedVerts: '='
         },
-        template: '<canvas></canvas>',
+        template: '<canvas ng-mousemove="onCanvasMousemove($event)"></canvas>',
         link: function($scope, $element){
             var aspect;
             var $canvas = $element.find('canvas');
@@ -462,8 +464,7 @@ angular.module('mdlr', [])
             $(window).on('resize', sizeCanvasToContainer);
 
             var closestVertIndexBuf = gl.createBuffer();
-            var closestVertIndex;
-            $canvas.on('mousemove', (evt) => {
+            $scope.onCanvasMousemove = (evt) => {
                 var cursorNDC = [
                     evt.offsetX / $canvas.width() * 2 - 1,
                     -(evt.offsetY / $canvas.height() * 2 - 1)
@@ -485,13 +486,13 @@ angular.module('mdlr', [])
                             Math.pow(cursorNDC[1] - vertNDC[1], 2);
                         if (dist < closestVertDist) {
                             closestVertDist = dist;
-                            closestVertIndex = i;
+                            while ($scope.selectedVerts.length)
+                                $scope.selectedVerts.pop();
+                            $scope.selectedVerts.push(i);
                         }
                     }
                 }
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, closestVertIndexBuf);
-                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([closestVertIndex]), gl.STATIC_DRAW);
-            })
+            };
             gl.enable(gl.DEPTH_TEST);
 
             var cvShaderProgram = createClosestVertShaderProgram(gl);
@@ -539,8 +540,8 @@ angular.module('mdlr', [])
                     gl.useProgram(shaderProgram);
                     gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
                 }
-                if (closestVertIndex !== undefined)
-                    drawCV(gl, cvShaderProgram, closestVertIndexBuf, cvPosAtt);
+                drawSelectedVerts(gl, cvShaderProgram, closestVertIndexBuf,
+                    cvPosAtt, $scope.selectedVerts.length);
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
                 window.requestAnimationFrame(render);
             }
@@ -563,7 +564,11 @@ angular.module('mdlr', [])
                 }
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
                 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
-            })
+            });
+            $scope.$watchCollection('selectedVerts', (newval) => {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, closestVertIndexBuf);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(newval), gl.STATIC_DRAW);
+            });
         }
     }
 })
