@@ -1,12 +1,3 @@
-function v4Timesm4(v4, m4){
-    return [
-        v4[0]*m4[0] + v4[1]*m4[4] + v4[2]*m4[8] + v4[3]*m4[12],
-        v4[0]*m4[1] + v4[1]*m4[5] + v4[2]*m4[9] + v4[3]*m4[13],
-        v4[0]*m4[2] + v4[1]*m4[6] + v4[2]*m4[10] + v4[3]*m4[14],
-        v4[0]*m4[3] + v4[1]*m4[7] + v4[2]*m4[11] + v4[3]*m4[15],
-    ];
-}
-
 angular.module('mdlr', [])
 .controller('ControlsController', function($scope, $interval, $rootScope){
     $scope.play = function(){
@@ -423,11 +414,15 @@ angular.module('mdlr', [])
             mv: '=',
             selectedVerts: '='
         },
-        template: '<canvas ng-mousemove="onCanvasMousemove($event)"></canvas>',
+        template: `<canvas
+            ng-mousedown="onCanvasMousedown($event)"
+            ng-mouseup="onCanvasMouseup($event)"
+            ng-mousemove="onCanvasMousemove($event)"></canvas>`,
         link: function($scope, $element){
             var aspect;
+            var zoom = 1/40;
             var $canvas = $element.find('canvas');
-            var n = 1;
+            var n = -100;
             var f = 100;
             var projectionMatrix;
             var camSpaceMatrix = $scope.mv;
@@ -441,10 +436,10 @@ angular.module('mdlr', [])
                 aspect = w/h;
                 $canvas.attr('width', w).attr('height', h);
                 projectionMatrix = [
-                    1/aspect, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, 0, 0,
-                    0, 0, 0, 40
+                    zoom/aspect, 0, 0, 0,
+                    0, zoom, 0, 0,
+                    0, 0, -2/(f-n), 0,
+                    0, 0, -(f+n)/(f-n), 1.0
                 ];
                 gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
                 gl.useProgram(svShaderProgram);
@@ -469,8 +464,8 @@ angular.module('mdlr', [])
                     for (var i=0; i<verts.length; i++) {
                         var vert = verts[i];
                         var vertNDC = [vert.x, vert.y, vert.z, 1];
-                        vertNDC = v4Timesm4(vertNDC, camSpaceMatrix);
-                        vertNDC = v4Timesm4(vertNDC, projectionMatrix);
+                        vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
+                        vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
                         vertNDC = [
                             vertNDC[0] / vertNDC[3],
                             vertNDC[1] / vertNDC[3],
@@ -490,14 +485,60 @@ angular.module('mdlr', [])
             $(window).on('resize', sizeCanvasToContainer);
 
             var selectedVertIndexBuf = gl.createBuffer();
-
             $scope.onCanvasMousemove = (evt) => {
-                var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
-                while ($scope.selectedVerts.length)
-                    $scope.selectedVerts.pop();
-                $scope.selectedVerts.push(closestVertIndex);
+                if (movingFrom) {
+                    var fromScr = movingFrom;
+                    var toScr = [evt.offsetX, evt.offsetY];
+                    var fromNDC = [
+                        fromScr[0] / $canvas.width() * 2 - 1,
+                        fromScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
+                        0, // near plane is +1!
+                        1 // w
+                    ];
+                    var toNDC = [
+                        toScr[0] / $canvas.width() * 2 - 1,
+                        toScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
+                        0, // near plane is +1!
+                        1 // w
+                    ];
+                    var invProjMat = mat4.create();
+                    mat4.invert(invProjMat, projectionMatrix);
+                    var fromCam = vec4.create();
+                    var toCam = vec4.create();
+                    vec4.transformMat4(fromCam, fromNDC, invProjMat);
+                    vec4.transformMat4(toCam, toNDC, invProjMat);
+                    var invCamSpaceMat = mat4.create();
+                    mat4.invert(invCamSpaceMat, camSpaceMatrix);
+                    var fromObj = vec4.create();
+                    var toObj = vec4.create();
+                    vec4.transformMat4(fromObj, fromCam, invCamSpaceMat);
+                    vec4.transformMat4(toObj, toCam, invCamSpaceMat);
+                    var delta = vec4.create();
+                    vec4.subtract(delta, toObj, fromObj);
+                    console.log('delta:', delta)
+                    // vec4.scale(delta, delta, 40);
+                    $scope.selectedVerts.forEach((vertIndex) => {
+                        var vert = $scope.model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                        vert.x += delta[0];
+                        vert.y += delta[1];
+                        vert.z += delta[2];
+                    });
+                    movingFrom = [evt.offsetX, evt.offsetY];
+                } else if (evt.buttons === 0) {
+                    var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+                    $scope.selectedVerts.length = 0;
+                    $scope.selectedVerts.push(closestVertIndex);
+                }
             };
-            gl.enable(gl.DEPTH_TEST);
+            var movingFrom;
+            $scope.onCanvasMousedown = (evt) => {
+                movingFrom = [evt.offsetX, evt.offsetY];
+                // and stop playing? or prevent this if playing?
+            }
+            $scope.onCanvasMouseup = (evt) => {
+                movingFrom = null;
+            }
+            // gl.enable(gl.DEPTH_TEST);
 
             var svShaderProgram = createSelectedVertShaderProgram(gl);
             gl.useProgram(svShaderProgram);
