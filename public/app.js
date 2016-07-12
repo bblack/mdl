@@ -417,6 +417,7 @@ angular.module('mdlr', [])
         template: `<canvas
             ng-mousedown="onCanvasMousedown($event)"
             ng-mouseup="onCanvasMouseup($event)"
+            ng-mouseleave="onCanvasMouseleave($event)"
             ng-mousemove="onCanvasMousemove($event)"></canvas>`,
         link: function($scope, $element){
             var aspect;
@@ -540,6 +541,9 @@ angular.module('mdlr', [])
                 // and stop playing? or prevent this if playing?
             }
             $scope.onCanvasMouseup = (evt) => {
+                movingFrom = null;
+            }
+            $scope.onCanvasMouseleave = (evt) => {
                 movingFrom = null;
             }
             // gl.enable(gl.DEPTH_TEST);
