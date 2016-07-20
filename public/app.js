@@ -379,6 +379,34 @@ angular.module('mdlr', [])
         gl.linkProgram(shaderProgram);
         return shaderProgram;
     }
+    function createSweepShaderProgram(gl){
+        var vertshader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertshader, `
+            attribute vec3 aVertPos;
+            void main(void){
+                gl_Position = vec4(aVertPos, 1.0);
+            }
+        `);
+        gl.compileShader(vertshader);
+        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(vertshader));
+        }
+        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragshader, `
+            void main(void){
+                gl_FragColor = vec4(1.0, 0.0, 0.0, 0.1);
+            }
+        `);
+        gl.compileShader(fragshader);
+        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(fragshader));
+        }
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertshader);
+        gl.attachShader(shaderProgram, fragshader);
+        gl.linkProgram(shaderProgram);
+        return shaderProgram;
+    }
     function bufferAxes(gl){
         var axesbuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
@@ -405,6 +433,12 @@ angular.module('mdlr', [])
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
         gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
+    }
+    function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt){
+        gl.useProgram(sweepShaderProgram);
+        gl.bindBuffer(gl.ARRAY_BUFFER, sweepBoxVertBuf);
+        gl.vertexAttribPointer(swPosAtt, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
     }
     return {
         restrict: 'E',
@@ -434,6 +468,8 @@ angular.module('mdlr', [])
                 entities: []
             };
             var gl = $canvas[0].getContext('webgl');
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
@@ -514,6 +550,7 @@ angular.module('mdlr', [])
             $(window).on('resize', sizeCanvasToContainer);
 
             var selectedVertIndexBuf = gl.createBuffer();
+            var sweepBoxVertBuf = gl.createBuffer();
             var movingFrom;
             $scope.onCanvasMousemove = (evt) => {
                 var fn = $scope.onCanvasMousemove[$scope.toolState];
@@ -566,6 +603,22 @@ angular.module('mdlr', [])
                     evt.offsetX, evt.offsetY);
                 $scope.selectedVerts.length = 0;
                 Array.prototype.push.apply($scope.selectedVerts, selectedVerts);
+                gl.bindBuffer(gl.ARRAY_BUFFER, sweepBoxVertBuf);
+                var fromNDC = [
+                    movingFrom[0] / $canvas.width() * 2 - 1,
+                    movingFrom[1] / $canvas.height() * -2 + 1
+                ];
+                var toNDC = [
+                    evt.offsetX / $canvas.width() * 2 - 1,
+                    evt.offsetY / $canvas.height() * -2 + 1
+                ];
+                var arr = [
+                    fromNDC[0], fromNDC[1], 0, // x, y, z NDC
+                    fromNDC[0], toNDC[1], 0,
+                    toNDC[0], toNDC[1], 0,
+                    toNDC[0], fromNDC[1], 0
+                ];
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
             }
             $scope.onCanvasMousedown = (evt) => {
                 var fn = $scope.onCanvasMousedown[$scope.toolState];
@@ -600,6 +653,11 @@ angular.module('mdlr', [])
                 movingFrom = null;
                 $scope.toolState = 'single';
             }
+
+            var sweepShaderProgram = createSweepShaderProgram(gl);
+            gl.useProgram(sweepShaderProgram);
+            var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
+            gl.enableVertexAttribArray(swPosAtt);
 
             var svShaderProgram = createSelectedVertShaderProgram(gl);
             gl.useProgram(svShaderProgram);
@@ -648,6 +706,8 @@ angular.module('mdlr', [])
                 drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
                     svPosAtt, $scope.selectedVerts.length);
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
+                if ($scope.toolState == 'sweep.sweeping')
+                    drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
                 window.requestAnimationFrame(render);
             }
             window.requestAnimationFrame(render);
