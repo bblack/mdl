@@ -414,12 +414,11 @@ angular.module('mdlr', [])
             mv: '=',
             selectedVerts: '='
         },
-        template: `<canvas
-            ng-mousedown="onCanvasMousedown($event)"
-            ng-mouseup="onCanvasMouseup($event)"
-            ng-mouseleave="onCanvasMouseleave($event)"
-            ng-mousemove="onCanvasMousemove($event)"></canvas>`,
+        templateUrl: '/public/templates/orthoWireProjection.html',
         link: function($scope, $element){
+            $scope.TOOLS = ['single'];
+            $scope.toolState = $scope.TOOLS[0];
+            $scope.setActiveTool = (t) => {$scope.toolState = t;}
             var aspect;
             var zoom = 1/40;
             var $canvas = $element.find('canvas');
@@ -490,63 +489,78 @@ angular.module('mdlr', [])
             $(window).on('resize', sizeCanvasToContainer);
 
             var selectedVertIndexBuf = gl.createBuffer();
-            $scope.onCanvasMousemove = (evt) => {
-                if (movingFrom) {
-                    var fromScr = movingFrom;
-                    var toScr = [evt.offsetX, evt.offsetY];
-                    var fromNDC = [
-                        fromScr[0] / $canvas.width() * 2 - 1,
-                        fromScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
-                        0, // near plane is +1!
-                        1 // w
-                    ];
-                    var toNDC = [
-                        toScr[0] / $canvas.width() * 2 - 1,
-                        toScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
-                        0, // near plane is +1!
-                        1 // w
-                    ];
-                    var invProjMat = mat4.create();
-                    mat4.invert(invProjMat, projectionMatrix);
-                    var fromCam = vec4.create();
-                    var toCam = vec4.create();
-                    vec4.transformMat4(fromCam, fromNDC, invProjMat);
-                    vec4.transformMat4(toCam, toNDC, invProjMat);
-                    var invCamSpaceMat = mat4.create();
-                    mat4.invert(invCamSpaceMat, camSpaceMatrix);
-                    var fromObj = vec4.create();
-                    var toObj = vec4.create();
-                    vec4.transformMat4(fromObj, fromCam, invCamSpaceMat);
-                    vec4.transformMat4(toObj, toCam, invCamSpaceMat);
-                    var delta = vec4.create();
-                    vec4.subtract(delta, toObj, fromObj);
-                    console.log('delta:', delta)
-                    // vec4.scale(delta, delta, 40);
-                    $scope.selectedVerts.forEach((vertIndex) => {
-                        var vert = $scope.model.frames[$scope.frame].simpleFrame.verts[vertIndex];
-                        vert.x += delta[0];
-                        vert.y += delta[1];
-                        vert.z += delta[2];
-                    });
-                    movingFrom = [evt.offsetX, evt.offsetY];
-                } else if (evt.buttons === 0) {
-                    var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
-                    $scope.selectedVerts.length = 0;
-                    $scope.selectedVerts.push(closestVertIndex);
-                }
-            };
             var movingFrom;
+            $scope.onCanvasMousemove = (evt) => {
+                var fn = $scope.onCanvasMousemove[$scope.toolState];
+                return fn && fn(evt);
+            };
+            $scope.onCanvasMousemove['single'] = (evt) => {
+                var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+                $scope.selectedVerts.length = 0;
+                $scope.selectedVerts.push(closestVertIndex);
+            };
+            $scope.onCanvasMousemove['single.moving'] = (evt) => {
+                var fromScr = movingFrom;
+                var toScr = [evt.offsetX, evt.offsetY];
+                var fromNDC = [
+                    fromScr[0] / $canvas.width() * 2 - 1,
+                    fromScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
+                    0, // near plane is +1!
+                    1 // w
+                ];
+                var toNDC = [
+                    toScr[0] / $canvas.width() * 2 - 1,
+                    toScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
+                    0, // near plane is +1!
+                    1 // w
+                ];
+                var invProjMat = mat4.create();
+                mat4.invert(invProjMat, projectionMatrix);
+                var fromCam = vec4.create();
+                var toCam = vec4.create();
+                vec4.transformMat4(fromCam, fromNDC, invProjMat);
+                vec4.transformMat4(toCam, toNDC, invProjMat);
+                var invCamSpaceMat = mat4.create();
+                mat4.invert(invCamSpaceMat, camSpaceMatrix);
+                var fromObj = vec4.create();
+                var toObj = vec4.create();
+                vec4.transformMat4(fromObj, fromCam, invCamSpaceMat);
+                vec4.transformMat4(toObj, toCam, invCamSpaceMat);
+                var delta = vec4.create();
+                vec4.subtract(delta, toObj, fromObj);
+                $scope.selectedVerts.forEach((vertIndex) => {
+                    var vert = $scope.model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                    vert.x += delta[0];
+                    vert.y += delta[1];
+                    vert.z += delta[2];
+                });
+                movingFrom = [evt.offsetX, evt.offsetY];
+            };
             $scope.onCanvasMousedown = (evt) => {
+                var fn = $scope.onCanvasMousedown[$scope.toolState];
+                return fn && fn(evt);
+            }
+            $scope.onCanvasMousedown['single'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];
                 // and stop playing? or prevent this if playing?
+                $scope.toolState = 'single.moving';
             }
             $scope.onCanvasMouseup = (evt) => {
+                var fn = $scope.onCanvasMouseup[$scope.toolState];
+                return fn && fn(evt);
+            }
+            $scope.onCanvasMouseup['single.moving'] = (evt) => {
                 movingFrom = null;
+                $scope.toolState = 'single';
             }
             $scope.onCanvasMouseleave = (evt) => {
-                movingFrom = null;
+                var fn = $scope.onCanvasMouseleave[$scope.toolState];
+                return fn && fn(evt);
             }
-            // gl.enable(gl.DEPTH_TEST);
+            $scope.onCanvasMouseleave['single.moving'] = (evt) => {
+                movingFrom = null;
+                $scope.toolState = 'single';
+            }
 
             var svShaderProgram = createSelectedVertShaderProgram(gl);
             gl.useProgram(svShaderProgram);
