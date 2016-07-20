@@ -1,6 +1,6 @@
 <span style='position: absolute; background-color: lightblue;'>
     <button type='button' ng-repeat='tool in TOOLS'
-        ng-disabled='tool != toolState.split(".")[0]'
+        ng-disabled='tool == toolState.split(".")[0]'
         ng-click='setToolState(tool)'>
         {{tool}}
     </button>

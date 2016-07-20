@@ -416,9 +416,9 @@ angular.module('mdlr', [])
         },
         templateUrl: '/public/templates/orthoWireProjection.html',
         link: function($scope, $element){
-            $scope.TOOLS = ['single'];
+            $scope.TOOLS = ['single', 'sweep'];
             $scope.toolState = $scope.TOOLS[0];
-            $scope.setActiveTool = (t) => {$scope.toolState = t;}
+            $scope.setToolState = (t) => {$scope.toolState = t;}
             var aspect;
             var zoom = 1/40;
             var $canvas = $element.find('canvas');
@@ -456,6 +456,16 @@ angular.module('mdlr', [])
                 var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
                 gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
             }
+            function worldToNDC(vert){
+                var vertNDC = [vert.x, vert.y, vert.z, 1];
+                vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
+                vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
+                return [
+                    vertNDC[0] / vertNDC[3],
+                    vertNDC[1] / vertNDC[3],
+                    vertNDC[2] / vertNDC[3]
+                ];
+            }
             function getClosestVert(x, y){
                 var cursorNDC = [
                     x / $canvas.width() * 2 - 1,
@@ -467,14 +477,7 @@ angular.module('mdlr', [])
                     var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
                     for (var i=0; i<verts.length; i++) {
                         var vert = verts[i];
-                        var vertNDC = [vert.x, vert.y, vert.z, 1];
-                        vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
-                        vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
-                        vertNDC = [
-                            vertNDC[0] / vertNDC[3],
-                            vertNDC[1] / vertNDC[3],
-                            vertNDC[2] / vertNDC[3]
-                        ];
+                        var vertNDC = worldToNDC(vert);
                         var dist = Math.pow(cursorNDC[0] - vertNDC[0], 2) +
                             Math.pow(cursorNDC[1] - vertNDC[1], 2);
                         if (dist < closestVertDist) {
@@ -484,6 +487,28 @@ angular.module('mdlr', [])
                     }
                 }
                 return closestVertIndex;
+            }
+            function getVertsIn(x1, y1, x2, y2){
+                var x1ndc = x1 / $canvas.width() * 2 - 1;
+                var y1ndc = y1 / $canvas.height() * -2 + 1;
+                var x2ndc = x2 / $canvas.width() * 2 - 1;
+                var y2ndc = y2 / $canvas.height() * -2 + 1;
+                var xlondc = Math.min(x1ndc, x2ndc);
+                var xhindc = Math.max(x1ndc, x2ndc);
+                var ylondc = Math.min(y1ndc, y2ndc);
+                var yhindc = Math.max(y1ndc, y2ndc);
+                var vertsHitIndeces = [];
+                for (var ent of scene.entities) {
+                    var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
+                    for (var i=0; i<verts.length; i++) {
+                        var vertNDC = worldToNDC(verts[i]);
+                        if (vertNDC[0] > xlondc && vertNDC[0] < xhindc
+                            && vertNDC[1] > ylondc && vertNDC[1] < yhindc) {
+                            vertsHitIndeces.push(i);
+                        }
+                    }
+                }
+                return vertsHitIndeces;
             }
 
             $(window).on('resize', sizeCanvasToContainer);
@@ -536,6 +561,12 @@ angular.module('mdlr', [])
                 });
                 movingFrom = [evt.offsetX, evt.offsetY];
             };
+            $scope.onCanvasMousemove['sweep.sweeping'] = (evt) => {
+                var selectedVerts = getVertsIn(movingFrom[0], movingFrom[1],
+                    evt.offsetX, evt.offsetY);
+                $scope.selectedVerts.length = 0;
+                Array.prototype.push.apply($scope.selectedVerts, selectedVerts);
+            }
             $scope.onCanvasMousedown = (evt) => {
                 var fn = $scope.onCanvasMousedown[$scope.toolState];
                 return fn && fn(evt);
@@ -545,6 +576,10 @@ angular.module('mdlr', [])
                 // and stop playing? or prevent this if playing?
                 $scope.toolState = 'single.moving';
             }
+            $scope.onCanvasMousedown['sweep'] = (evt) => {
+                movingFrom = [evt.offsetX, evt.offsetY];
+                $scope.toolState = 'sweep.sweeping';
+            }
             $scope.onCanvasMouseup = (evt) => {
                 var fn = $scope.onCanvasMouseup[$scope.toolState];
                 return fn && fn(evt);
@@ -552,6 +587,10 @@ angular.module('mdlr', [])
             $scope.onCanvasMouseup['single.moving'] = (evt) => {
                 movingFrom = null;
                 $scope.toolState = 'single';
+            }
+            $scope.onCanvasMouseup['sweep.sweeping'] = (evt) => {
+                movingFrom = null;
+                $scope.toolState = 'sweep';
             }
             $scope.onCanvasMouseleave = (evt) => {
                 var fn = $scope.onCanvasMouseleave[$scope.toolState];
