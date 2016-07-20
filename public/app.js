@@ -41,11 +41,11 @@ angular.module('mdlr', [])
             var pattern = /^\{\s*(.*)f,\s*(.*)f,\s*(.*)f\s*\}\s*,\s*$/
             var match = lines[i].match(pattern);
             if (match) {
-                norms.push(new Vec3(
+                norms.push([
                     parseFloat(match[1]),
                     parseFloat(match[2]),
                     parseFloat(match[3])
-                ));
+                ]);
             }
         }
     });
