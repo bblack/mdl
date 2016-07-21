@@ -446,13 +446,12 @@ angular.module('mdlr', [])
             model: '=',
             frame: '=',
             mv: '=',
-            selectedVerts: '='
+            selectedVerts: '=',
+            toolState: '='
         },
         templateUrl: '/public/templates/orthoWireProjection.html',
         link: function($scope, $element){
             $scope.TOOLS = ['single', 'sweep'];
-            $scope.toolState = $scope.TOOLS[0];
-            $scope.setToolState = (t) => {$scope.toolState = t;}
             var aspect;
             var zoom = 1/40;
             var $canvas = $element.find('canvas');
@@ -553,7 +552,7 @@ angular.module('mdlr', [])
             var sweepBoxVertBuf = gl.createBuffer();
             var movingFrom;
             $scope.onCanvasMousemove = (evt) => {
-                var fn = $scope.onCanvasMousemove[$scope.toolState];
+                var fn = $scope.onCanvasMousemove[$scope.toolState.get()];
                 return fn && fn(evt);
             };
             $scope.onCanvasMousemove['single'] = (evt) => {
@@ -621,37 +620,37 @@ angular.module('mdlr', [])
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
             }
             $scope.onCanvasMousedown = (evt) => {
-                var fn = $scope.onCanvasMousedown[$scope.toolState];
+                var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
                 return fn && fn(evt);
             }
             $scope.onCanvasMousedown['single'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];
                 // and stop playing? or prevent this if playing?
-                $scope.toolState = 'single.moving';
+                $scope.toolState.set('single.moving');
             }
             $scope.onCanvasMousedown['sweep'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];
-                $scope.toolState = 'sweep.sweeping';
+                $scope.toolState.set('sweep.sweeping');
             }
             $scope.onCanvasMouseup = (evt) => {
-                var fn = $scope.onCanvasMouseup[$scope.toolState];
+                var fn = $scope.onCanvasMouseup[$scope.toolState.get()];
                 return fn && fn(evt);
             }
             $scope.onCanvasMouseup['single.moving'] = (evt) => {
                 movingFrom = null;
-                $scope.toolState = 'single';
+                $scope.toolState.set('single');
             }
             $scope.onCanvasMouseup['sweep.sweeping'] = (evt) => {
                 movingFrom = null;
-                $scope.toolState = 'sweep';
+                $scope.toolState.set('sweep');
             }
             $scope.onCanvasMouseleave = (evt) => {
-                var fn = $scope.onCanvasMouseleave[$scope.toolState];
+                var fn = $scope.onCanvasMouseleave[$scope.toolState.get()];
                 return fn && fn(evt);
             }
             $scope.onCanvasMouseleave['single.moving'] = (evt) => {
                 movingFrom = null;
-                $scope.toolState = 'single';
+                $scope.toolState.set('single');
             }
 
             var sweepShaderProgram = createSweepShaderProgram(gl);
@@ -706,7 +705,7 @@ angular.module('mdlr', [])
                 drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
                     svPosAtt, $scope.selectedVerts.length);
                 drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
-                if ($scope.toolState == 'sweep.sweeping')
+                if ($scope.toolState.get() == 'sweep.sweeping')
                     drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
                 window.requestAnimationFrame(render);
             }
@@ -737,3 +736,10 @@ angular.module('mdlr', [])
         }
     }
 })
+.run(($rootScope) => {
+    $rootScope.toolState = {
+        $name: 'single',
+        get: () => $rootScope.toolState.$name,
+        set: (name) => $rootScope.toolState.$name = name
+    }
+});
