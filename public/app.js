@@ -172,7 +172,9 @@ angular.module('mdlr', [])
             frame: '=',
             mv: '='
         },
-        template: '<canvas></canvas>',
+        template: `<canvas ng-mousemove="mousemove($event)"
+            ng-mousedown="mousedown($event)"
+            ></canvas>`,
         link: function($scope, $element){
             var aspect;
             var $canvas = $element.find('canvas');
@@ -183,6 +185,22 @@ angular.module('mdlr', [])
                 entities: []
             };
             var gl = $canvas[0].getContext('webgl');
+            var yaw = 0;
+            var lastScreenPos;
+            $scope.mousedown = (evt) => {
+                lastScreenPos = [evt.offsetX, evt.offsetY];
+            }
+            $scope.mousemove = (evt) => {
+                if (evt.buttons & 1) {
+                    var curScreenPos = [evt.offsetX, evt.offsetY];
+                    var dx = (curScreenPos[0] - lastScreenPos[0])
+                    yaw += (dx * 0.02);
+                    while (yaw > Math.PI*2) yaw -= Math.PI*2;
+                    while (yaw < 0) yaw += Math.PI*2;
+                    setCamSpaceMatrix();
+                }
+                lastScreenPos = [evt.offsetX, evt.offsetY];
+            }
             function sizeCanvasToContainer(){
                 var w = $element.width();
                 var h = $element.height();
@@ -208,14 +226,10 @@ angular.module('mdlr', [])
             var axesbuf = bufferAxes(gl);
             var axisShaderProgram = createAxisShaderProgram(gl);
             gl.useProgram(axisShaderProgram);
-
             var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
             gl.enableVertexAttribArray(axisvertexposatt);
             var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
             gl.enableVertexAttribArray(axisvertcoloratt);
-            var camSpaceMatrix = $scope.mv;
-            var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
             var shaderProgram = createModelShaderProgram(gl);
             gl.useProgram(shaderProgram);
@@ -223,11 +237,21 @@ angular.module('mdlr', [])
             gl.enableVertexAttribArray(vertexPositionAttribute);
             var vertexTexCoordAttribute = gl.getAttribLocation(shaderProgram, "aVertexTexCoord");
             gl.enableVertexAttribArray(vertexTexCoordAttribute);
-            var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
-            // vertex buffer:
-            var buf = gl.createBuffer();
 
+            function setCamSpaceMatrix(){
+                var camSpaceMatrix = mat4.fromValues.apply(mat4, $scope.mv);
+                mat4.rotate(camSpaceMatrix, camSpaceMatrix, yaw,
+                    vec4.fromValues(0, 0, 1));
+                gl.useProgram(axisShaderProgram);
+                var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
+                gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
+                gl.useProgram(shaderProgram);
+                var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
+                gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
+            }
+            setCamSpaceMatrix();
+
+            var buf = gl.createBuffer();
             var tex = gl.createTexture();
 
             function render(){
