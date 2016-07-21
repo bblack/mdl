@@ -1,5 +1,6 @@
 angular.module('mdlr', [])
 .controller('ControlsController', function($scope, $interval, $rootScope){
+    $scope.TOOLS = ['single', 'sweep'];
     $scope.play = function(){
         if ($scope.playing) { return; }
 
@@ -7,7 +8,6 @@ angular.module('mdlr', [])
             $rootScope.frame = ($rootScope.frame + 1) % $scope.model.frames.length;
         }, 100);
     };
-
     $scope.stop = function(){
         $interval.cancel($scope.playing);
         delete $scope.playing;
@@ -451,7 +451,6 @@ angular.module('mdlr', [])
         },
         templateUrl: '/public/templates/orthoWireProjection.html',
         link: function($scope, $element){
-            $scope.TOOLS = ['single', 'sweep'];
             var aspect;
             var zoom = 1/40;
             var $canvas = $element.find('canvas');

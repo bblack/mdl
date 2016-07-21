@@ -1,10 +1,3 @@
-<span style='position: absolute; background-color: lightblue;'>
-    <button type='button' ng-repeat='tool in TOOLS'
-        ng-disabled='tool == toolState.get().split(".")[0]'
-        ng-click='toolState.set(tool)'>
-        {{tool}}
-    </button>
-</span>
 <canvas
     ng-mousedown="onCanvasMousedown($event)"
     ng-mouseup="onCanvasMouseup($event)"
