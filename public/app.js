@@ -185,6 +185,7 @@ angular.module('mdlr', [])
                 entities: []
             };
             var gl = $canvas[0].getContext('webgl');
+            var pitch = 0;
             var yaw = 0;
             var lastScreenPos;
             $scope.mousedown = (evt) => {
@@ -193,8 +194,10 @@ angular.module('mdlr', [])
             $scope.mousemove = (evt) => {
                 if (evt.buttons & 1) {
                     var curScreenPos = [evt.offsetX, evt.offsetY];
-                    var dx = (curScreenPos[0] - lastScreenPos[0])
-                    yaw += (dx * 0.02);
+                    pitch += (curScreenPos[1] - lastScreenPos[1]) * 0.02;
+                    while (pitch > Math.PI*2) pitch -= Math.PI*2;
+                    while (pitch < 0) pitch += Math.PI*2;
+                    yaw += (curScreenPos[0] - lastScreenPos[0]) * 0.02;
                     while (yaw > Math.PI*2) yaw -= Math.PI*2;
                     while (yaw < 0) yaw += Math.PI*2;
                     setCamSpaceMatrix();
@@ -240,8 +243,10 @@ angular.module('mdlr', [])
 
             function setCamSpaceMatrix(){
                 var camSpaceMatrix = mat4.fromValues.apply(mat4, $scope.mv);
+                mat4.rotate(camSpaceMatrix, camSpaceMatrix, pitch,
+                    vec3.fromValues(1, 0, 0));
                 mat4.rotate(camSpaceMatrix, camSpaceMatrix, yaw,
-                    vec4.fromValues(0, 0, 1));
+                    vec3.fromValues(0, 0, 1));
                 gl.useProgram(axisShaderProgram);
                 var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
                 gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
