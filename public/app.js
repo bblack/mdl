@@ -1,6 +1,6 @@
 angular.module('mdlr', [])
 .controller('ControlsController', function($scope, $interval, $rootScope){
-    $scope.TOOLS = ['single', 'sweep'];
+    $scope.TOOLS = ['single', 'sweep', 'move'];
     $scope.play = function(){
         if ($scope.playing) { return; }
 
@@ -550,18 +550,7 @@ angular.module('mdlr', [])
             var selectedVertIndexBuf = gl.createBuffer();
             var sweepBoxVertBuf = gl.createBuffer();
             var movingFrom;
-            $scope.onCanvasMousemove = (evt) => {
-                var fn = $scope.onCanvasMousemove[$scope.toolState.get()];
-                return fn && fn(evt);
-            };
-            $scope.onCanvasMousemove['single'] = (evt) => {
-                var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
-                $scope.selectedVerts.length = 0;
-                $scope.selectedVerts.push(closestVertIndex);
-            };
-            $scope.onCanvasMousemove['single.moving'] = (evt) => {
-                var fromScr = movingFrom;
-                var toScr = [evt.offsetX, evt.offsetY];
+            function moveSelectedVerts(fromScr, toScr){
                 var fromNDC = [
                     fromScr[0] / $canvas.width() * 2 - 1,
                     fromScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
@@ -594,6 +583,26 @@ angular.module('mdlr', [])
                     vert.y += delta[1];
                     vert.z += delta[2];
                 });
+            }
+            $scope.onCanvasMousemove = (evt) => {
+                var fn = $scope.onCanvasMousemove[$scope.toolState.get()];
+                return fn && fn(evt);
+            };
+            $scope.onCanvasMousemove['move.moving'] = (evt) => {
+                var fromScr = movingFrom;
+                var toScr = [evt.offsetX, evt.offsetY];
+                moveSelectedVerts(fromScr, toScr);
+                movingFrom = [evt.offsetX, evt.offsetY];
+            };
+            $scope.onCanvasMousemove['single'] = (evt) => {
+                var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+                $scope.selectedVerts.length = 0;
+                $scope.selectedVerts.push(closestVertIndex);
+            };
+            $scope.onCanvasMousemove['single.moving'] = (evt) => {
+                var fromScr = movingFrom;
+                var toScr = [evt.offsetX, evt.offsetY];
+                moveSelectedVerts(fromScr, toScr);
                 movingFrom = [evt.offsetX, evt.offsetY];
             };
             $scope.onCanvasMousemove['sweep.sweeping'] = (evt) => {
@@ -622,6 +631,10 @@ angular.module('mdlr', [])
                 var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
                 return fn && fn(evt);
             }
+            $scope.onCanvasMousedown['move'] = (evt) => {
+                movingFrom = [evt.offsetX, evt.offsetY];
+                $scope.toolState.set('move.moving');
+            }
             $scope.onCanvasMousedown['single'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];
                 // and stop playing? or prevent this if playing?
@@ -635,6 +648,10 @@ angular.module('mdlr', [])
                 var fn = $scope.onCanvasMouseup[$scope.toolState.get()];
                 return fn && fn(evt);
             }
+            $scope.onCanvasMouseup['move.moving'] = (evt) => {
+                movingFrom = null;
+                $scope.toolState.set('move');
+            }
             $scope.onCanvasMouseup['single.moving'] = (evt) => {
                 movingFrom = null;
                 $scope.toolState.set('single');
@@ -646,6 +663,10 @@ angular.module('mdlr', [])
             $scope.onCanvasMouseleave = (evt) => {
                 var fn = $scope.onCanvasMouseleave[$scope.toolState.get()];
                 return fn && fn(evt);
+            }
+            $scope.onCanvasMouseup['move.moving'] = (evt) => {
+                movingFrom = null;
+                $scope.toolState.set('move');
             }
             $scope.onCanvasMouseleave['single.moving'] = (evt) => {
                 movingFrom = null;
