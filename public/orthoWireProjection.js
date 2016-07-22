@@ -264,31 +264,24 @@ angular.module('mdlr')
             var selectedVertIndexBuf = gl.createBuffer();
             var sweepBoxVertBuf = gl.createBuffer();
             var movingFrom;
-            function moveSelectedVerts(fromScr, toScr){
-                var fromNDC = [
-                    fromScr[0] / $canvas.width() * 2 - 1,
-                    fromScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
-                    0, // near plane is +1!
-                    1 // w
-                ];
-                var toNDC = [
-                    toScr[0] / $canvas.width() * 2 - 1,
-                    toScr[1] / $canvas.height() * -2 + 1, // flip Y dir!
-                    0, // near plane is +1!
-                    1 // w
-                ];
+            function ndcToWorld(vNDC){
                 var invProjMat = mat4.create();
                 mat4.invert(invProjMat, projectionMatrix);
-                var fromCam = vec4.create();
-                var toCam = vec4.create();
-                vec4.transformMat4(fromCam, fromNDC, invProjMat);
-                vec4.transformMat4(toCam, toNDC, invProjMat);
+                var vCam = vec4.create();
+                vec4.transformMat4(vCam, vNDC, invProjMat);
                 var invCamSpaceMat = mat4.create();
                 mat4.invert(invCamSpaceMat, camSpaceMatrix);
-                var fromObj = vec4.create();
-                var toObj = vec4.create();
-                vec4.transformMat4(fromObj, fromCam, invCamSpaceMat);
-                vec4.transformMat4(toObj, toCam, invCamSpaceMat);
+                var vWorld = vec4.create();
+                vec4.transformMat4(vWorld, vCam, invCamSpaceMat);
+                return vWorld;
+            }
+            function moveSelectedVerts(fromScr, toScr){
+                var w = $canvas.width();
+                var h = $canvas.height();
+                var fromNDC = [fromScr[0]/w*2-1, fromScr[1]/h*-2+1, 0, 1];
+                var toNDC = [toScr[0]/w*2-1, toScr[1]/h*-2+1, 0, 1];
+                var fromObj = ndcToWorld(fromNDC);
+                var toObj = ndcToWorld(toNDC);
                 var delta = vec4.create();
                 vec4.subtract(delta, toObj, fromObj);
                 $scope.selectedVerts.forEach((vertIndex) => {
@@ -344,6 +337,13 @@ angular.module('mdlr')
             $scope.onCanvasMousedown = (evt) => {
                 var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
                 return fn && fn(evt);
+            }
+            $scope.onCanvasMousedown['addvert'] = (evt) => {
+                var xNDC = evt.offsetX / $canvas.width() * 2 - 1;
+                var yNDC = evt.offsetY / $canvas.height() * -2 + 1;
+                var vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
+                var vWorld = ndcToWorld(vNDC);
+                $scope.model.addVert(vWorld[0], vWorld[1], vWorld[2]);
             }
             $scope.onCanvasMousedown['move'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];

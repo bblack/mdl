@@ -1,6 +1,19 @@
 angular.module('mdlr', [])
+.factory('Mdl', function(){
+    function Mdl(obj){
+        Object.assign(this, obj);
+    }
+    Mdl.prototype.addVert = function(x, y, z){
+        this.texCoords.push({s: 0, t: 0, onSeam: 0});
+        this.frames.forEach((f) => {
+            f.simpleFrame.verts.push({x: x, y: y, z: z});
+        });
+        this.numVerts++;
+    }
+    return Mdl;
+})
 .controller('ControlsController', function($scope, $interval, $rootScope){
-    $scope.TOOLS = ['single', 'sweep', 'move'];
+    $scope.TOOLS = ['single', 'sweep', 'move', 'addvert'];
     $scope.play = function(){
         if ($scope.playing) { return; }
 
@@ -13,14 +26,14 @@ angular.module('mdlr', [])
         delete $scope.playing;
     };
 })
-.controller('QuadViewController', function($scope, $rootScope, $http){
+.controller('QuadViewController', function($scope, $rootScope, $http, Mdl){
     $scope.selectedVerts = [];
     $http.get('palette')
     .then(function(res){
         $rootScope.palette = res.data;
         return $http.get('player.mdl')
         .then(function(res){
-            var model = $rootScope.model = res.data;
+            var model = $rootScope.model = new Mdl(res.data);
             _.each(model.frames, (f) => {
                 _.each(f.simpleFrame.verts, (v) => {
                     v.x = v.x * model.scale[0] + model.translate[0];
