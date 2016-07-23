@@ -8,12 +8,11 @@ angular.module('mdlr', [])
         this.frames.forEach((f) => {
             f.simpleFrame.verts.push({x: x, y: y, z: z});
         });
-        this.numVerts++;
     }
     return Mdl;
 })
 .controller('ControlsController', function($scope, $interval, $rootScope){
-    $scope.TOOLS = ['single', 'sweep', 'move', 'addvert'];
+    $scope.TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
     $scope.play = function(){
         if ($scope.playing) { return; }
 

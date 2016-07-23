@@ -251,6 +251,10 @@ angular.module('mdlr')
                     pixels.set(rgb, pixnum * 4);
                 });
                 loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
+            })
+            $scope.$watchCollection('model.triangles', () => {
+                var model = $scope.model;
+                if (!model) return;
                 bufferTexCoords(gl, texcoordsbuf, model.triangles,
                     model.texCoords, model.skinWidth, model.skinHeight);
             })

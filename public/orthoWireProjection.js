@@ -370,6 +370,29 @@ angular.module('mdlr')
                 var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
                 return fn && fn(evt);
             }
+            var newtri;
+            ['addtri', 'addtri.vert2', 'addtri.vert3'].forEach((ts) => {
+                $scope.onCanvasMousemove[ts] = (evt) => {
+                    var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+                    $scope.selectedVerts.length = 0;
+                    $scope.selectedVerts.push(closestVertIndex);
+                }
+            })
+            $scope.onCanvasMousedown['addtri'] = (evt) => {
+                newtri = {facesFront: 0, vertIndeces: []};
+                newtri.vertIndeces.push($scope.selectedVerts[0]);
+                $scope.toolState.set('addtri.vert2')
+            }
+            $scope.onCanvasMousedown['addtri.vert2'] = (evt) => {
+                newtri.vertIndeces.push($scope.selectedVerts[0]);
+                $scope.toolState.set('addtri.vert3')
+            }
+            $scope.onCanvasMousedown['addtri.vert3'] = (evt) => {
+                newtri.vertIndeces.push($scope.selectedVerts[0]);
+                $scope.model.triangles.push(newtri);
+                newtri = null;
+                $scope.toolState.set('addtri');
+            }
             $scope.onCanvasMousedown['addvert'] = (evt) => {
                 var xNDC = evt.offsetX / $canvas.width() * 2 - 1;
                 var yNDC = evt.offsetY / $canvas.height() * -2 + 1;
@@ -505,10 +528,9 @@ angular.module('mdlr')
                 if (!newvals[0]) return;
                 scene.entities = [{model: newvals[0], frame: newvals[1]}];
             });
-            $scope.$watch('model', (model) => {
-                if (!model) return;
+            $scope.$watchCollection('model.triangles', (tris) => {
                 var vertIndeces = [];
-                for (var tri of model.triangles) {
+                for (var tri of tris || []) {
                     vertIndeces.push(tri.vertIndeces[0], tri.vertIndeces[1],
                         tri.vertIndeces[1], tri.vertIndeces[2],
                         tri.vertIndeces[2], tri.vertIndeces[0]);
