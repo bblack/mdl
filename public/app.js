@@ -43,7 +43,7 @@ angular.module('mdlr', [])
             return n;
         }
         BufferReader.prototype.readStr = function(len){
-            var s = this.buf.toString('utf8', this.ptr, len);
+            var s = this.buf.toString('utf8', this.ptr, this.ptr + len);
             var termpos = s.indexOf('\u0000');
             if (termpos > -1) s = s.slice(0, termpos);
             this.ptr += len; // will we ever want to keep the ptr at nullterm + 1?
@@ -53,6 +53,10 @@ angular.module('mdlr', [])
             var n = this.buf.readUInt8(this.ptr);
             this.ptr += 1;
             return n;
+        }
+        function BufferWriter(buf){
+            this.buf = buf;
+            this.ptr = ptr;
         }
 
         var br = new BufferReader(buf);
@@ -71,7 +75,7 @@ angular.module('mdlr', [])
         o.numFrames = br.readInt32LE();
         o.syncType = br.readInt32LE();
         o.flags = br.readInt32LE();
-        o.size = br.readInt32LE();
+        o.size = br.readFloatLE();
 
         o.skins = [];
         for (var i=0; i<o.numSkins; i++) {
@@ -123,7 +127,102 @@ angular.module('mdlr', [])
             o.frames.push(frame);
         }
 
-        return o;
+        _.each(o.frames, (f) => {
+            _.each(f.simpleFrame.verts, (v) => {
+                v.x = v.x * o.scale[0] + o.translate[0];
+                v.y = v.y * o.scale[1] + o.translate[1];
+                v.z = v.z * o.scale[2] + o.translate[2];
+            })
+        })
+
+        return new Mdl(o);
+    }
+    function BufferWriter(buf){
+        this.buf = buf;
+        this.ptr = 0;
+    }
+    BufferWriter.prototype.write = function(str, length, encoding){
+        this.buf.write(str, this.ptr, length, encoding);
+        this.ptr += (length === undefined ? str.length : length);
+    }
+    BufferWriter.prototype.writeInt32LE = function(val){
+        this.buf.writeInt32LE(val, this.ptr);
+        this.ptr += 4;
+    }
+    BufferWriter.prototype.writeFloatLE = function(val){
+        this.buf.writeFloatLE(val, this.ptr);
+        this.ptr += 4;
+    }
+    BufferWriter.prototype.writeUInt8 = function(val){
+        this.buf.writeUInt8(val, this.ptr);
+        this.ptr += 1;
+    }
+    BufferWriter.prototype.writeVec3 = function(val){
+        [0, 1, 2].forEach((n) => this.writeFloatLE(val[n]))
+    }
+    function writeVert(bw, v, scale, translate){
+        bw.writeUInt8((v.x - translate[0]) / scale[0]);
+        bw.writeUInt8((v.y - translate[1]) / scale[1]);
+        bw.writeUInt8((v.z - translate[2]) / scale[2]);
+        bw.writeUInt8(v.normalIndex);
+    }
+    Mdl.prototype.toBuffer = function(){
+        var headerSize = 84;
+        var skinsSize = this.skins.length * (4 + (this.skinWidth * this.skinHeight));
+        var texCoordsSize = this.texCoords.length * 12;
+        var trisSize = this.triangles.length * 16;
+        var framesSize = this.frames.length * (28 + this.texCoords.length * 4);
+        var mdlbuf = new buffer.Buffer(headerSize + skinsSize + texCoordsSize +
+            trisSize + framesSize);
+        mdlbuf.fill(0x00);
+        var bw = new BufferWriter(mdlbuf);
+        var scale = this.scale; // TODO: derive
+        var translate = this.translate; // TODO: derive
+        bw.write('IDPO');
+        bw.writeInt32LE(this.version);
+        bw.writeVec3(scale);
+        bw.writeVec3(translate);
+        bw.writeFloatLE(this.boundingRadius);
+        bw.writeVec3(this.eyePosition);
+        bw.writeInt32LE(this.numSkins);
+        bw.writeInt32LE(this.skinWidth);
+        bw.writeInt32LE(this.skinHeight);
+        bw.writeInt32LE(this.numVerts);
+        bw.writeInt32LE(this.numTris);
+        bw.writeInt32LE(this.numFrames);
+        bw.writeInt32LE(this.syncType);
+        bw.writeInt32LE(this.flags);
+        bw.writeFloatLE(this.size); // TODO: what is this
+        this.skins.forEach((skin) => {
+            if (skin.type != 0) throw 'nyi';
+            bw.writeInt32LE(skin.type);
+            var pixels = new buffer.Buffer(skin.data.data);
+            // REVERSE PALETTE LOOKUP HERE! RGB -> index
+            pixels.copy(bw.buf, bw.ptr);
+            bw.ptr += pixels.length;
+        })
+        this.texCoords.forEach((tc) => {
+            bw.writeInt32LE(tc.onSeam);
+            bw.writeInt32LE(tc.s);
+            bw.writeInt32LE(tc.t);
+        })
+        this.triangles.forEach((tri) => {
+            bw.writeInt32LE(tri.facesFront);
+            bw.writeInt32LE(tri.vertIndeces[0]);
+            bw.writeInt32LE(tri.vertIndeces[1]);
+            bw.writeInt32LE(tri.vertIndeces[2]);
+        })
+        this.frames.forEach((f) => {
+            bw.writeInt32LE(f.type);
+            if (f.type != 0) throw 'nyi';
+            // previously we will have come up with mdl.scale, mdl.translate,
+            // and use those to come up with the uint8-compressed coords
+            writeVert(bw, f.simpleFrame.bboxMin, [1,1,1], [0,0,0]); // TODO: derive scale & translate
+            writeVert(bw, f.simpleFrame.bboxMax, [1,1,1], [0,0,0]); // TODO: derive scale & translate
+            bw.write(f.simpleFrame.name, 16);
+            f.simpleFrame.verts.forEach((v) => writeVert(bw, v, scale, translate));
+        })
+        return mdlbuf;
     }
     Mdl.prototype.addVert = function(x, y, z){
         this.texCoords.push({s: 0, t: 0, onSeam: 0});
@@ -146,6 +245,11 @@ angular.module('mdlr', [])
         $interval.cancel($scope.playing);
         delete $scope.playing;
     };
+    $scope.save = function(){
+        var mdlbuf = $scope.model.toBuffer();
+        var mdlblob = new Blob([mdlbuf], {type: 'application/octet-stream'});
+        window.location = URL.createObjectURL(mdlblob);
+    }
 })
 .controller('QuadViewController', function($scope, $rootScope, $http, Mdl){
     $scope.selectedVerts = [];
@@ -155,14 +259,7 @@ angular.module('mdlr', [])
         return $http.get('/public/player.mdl', {responseType: 'arraybuffer'})
         .then(function(res){
             var buf = new buffer.Buffer(new Uint8Array(res.data));
-            var model = $rootScope.model = Mdl.fromBuffer(buf);
-            _.each(model.frames, (f) => {
-                _.each(f.simpleFrame.verts, (v) => {
-                    v.x = v.x * model.scale[0] + model.translate[0];
-                    v.y = v.y * model.scale[1] + model.translate[1];
-                    v.z = v.z * model.scale[2] + model.translate[2];
-                })
-            })
+            $rootScope.model = Mdl.fromBuffer(buf);
             $rootScope.frame = 0;
         });
     });

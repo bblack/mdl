@@ -13,7 +13,7 @@
                 margin: 0;
                 padding: 0;
                 color: #e0e0e0;
-                font-family: monospace;
+                font-family: inconsolata, monospace;
                 font-weight: 300;
             }
 
@@ -79,6 +79,10 @@
     </head>
     <body ng-app='mdlr'>
         <div id='controls' ng-controller='ControlsController'>
+            <div>
+                <h3>File</h3>
+                <button type='button' ng-click='save()'>Save</button>
+            </div>
             <h3>Model info</h3>
             <table>
                 <tr>
