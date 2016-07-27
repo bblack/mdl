@@ -81,6 +81,8 @@
         <div id='controls' ng-controller='ControlsController'>
             <div>
                 <h3>File</h3>
+                <input type='file' id='file'
+                    onchange='angular.element(this).scope().open()'>Open</input>
                 <button type='button' ng-click='save()'>Save</button>
             </div>
             <h3>Model info</h3>

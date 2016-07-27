@@ -232,7 +232,7 @@ angular.module('mdlr', [])
     }
     return Mdl;
 })
-.controller('ControlsController', function($scope, $interval, $rootScope){
+.controller('ControlsController', function($scope, $interval, $rootScope, $element){
     $scope.TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
     $scope.play = function(){
         if ($scope.playing) { return; }
@@ -245,13 +245,24 @@ angular.module('mdlr', [])
         $interval.cancel($scope.playing);
         delete $scope.playing;
     };
+    $scope.open = function(evt){
+        var file = $element.find('input#file')[0].files[0];
+        var fr = new FileReader();
+        fr.onloadend = (a,b,c) => {
+            if (fr.readyState != FileReader.DONE) throw 'status bad';
+            var arraybuffer = fr.result;
+            var buf = new buffer.Buffer(new Uint8Array(arraybuffer));
+            $scope.$apply(() => $scope.$emit('modelbuffer', buf));
+        }
+        fr.readAsArrayBuffer(file);
+    }
     $scope.save = function(){
         var mdlbuf = $scope.model.toBuffer();
         var mdlblob = new Blob([mdlbuf], {type: 'application/octet-stream'});
         window.location = URL.createObjectURL(mdlblob);
     }
 })
-.controller('QuadViewController', function($scope, $rootScope, $http, Mdl){
+.controller('QuadViewController', function($scope, $rootScope, $http){
     $scope.selectedVerts = [];
     $http.get('palette')
     .then(function(res){
@@ -259,8 +270,7 @@ angular.module('mdlr', [])
         return $http.get('/public/player.mdl', {responseType: 'arraybuffer'})
         .then(function(res){
             var buf = new buffer.Buffer(new Uint8Array(res.data));
-            $rootScope.model = Mdl.fromBuffer(buf);
-            $rootScope.frame = 0;
+            $scope.$emit('modelbuffer', buf);
         });
     });
 })
@@ -284,10 +294,14 @@ angular.module('mdlr', [])
 
     return norms;
 })
-.run(($rootScope) => {
+.run(($rootScope, Mdl) => {
     $rootScope.toolState = {
         $name: 'single',
         get: () => $rootScope.toolState.$name,
         set: (name) => $rootScope.toolState.$name = name
     }
+    $rootScope.$on('modelbuffer', (evt, buf) => {
+        $rootScope.model = Mdl.fromBuffer(buf);
+        $rootScope.frame = 0;
+    })
 });
