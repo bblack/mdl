@@ -254,7 +254,11 @@ angular.module('mdlr', [])
         var lerp = (newTickTime - lastTickTime) / 100;
         lastTickTime = newTickTime;
         $rootScope.frame = ($rootScope.frame + lerp) % $scope.model.frames.length
-        if ($scope.playing) requestAnimationFrame(lerpFrame);
+        if ($scope.playing) {
+            requestAnimationFrame(lerpFrame);
+        } else {
+            $rootScope.frame = Math.floor($rootScope.frame);
+        }
     }
     $scope.play = function(){
         if ($scope.playing) { return; }
