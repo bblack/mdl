@@ -175,9 +175,22 @@ angular.module('mdlr', [])
         var mdlbuf = new buffer.Buffer(headerSize + skinsSize + texCoordsSize +
             trisSize + framesSize);
         mdlbuf.fill(0x00);
+        // calc scale & translate.
+        var maxvert = [-Infinity, -Infinity, -Infinity];
+        var minvert = [Infinity, Infinity, Infinity];
+        for (f of this.frames) {
+            for (v of f.simpleFrame.verts) {
+                if (v.x < minvert[0]) minvert[0] = v.x;
+                if (v.x > maxvert[0]) maxvert[0] = v.x;
+                if (v.y < minvert[1]) minvert[1] = v.y;
+                if (v.y > maxvert[1]) maxvert[1] = v.y;
+                if (v.z < minvert[2]) minvert[2] = v.z;
+                if (v.z > maxvert[2]) maxvert[2] = v.z;
+            }
+        }
+        var scale = [0,1,2].map((i) => (maxvert[i] - minvert[i]) / 255);
+        var translate = minvert;
         var bw = new BufferWriter(mdlbuf);
-        var scale = this.scale; // TODO: derive
-        var translate = this.translate; // TODO: derive
         bw.write('IDPO');
         bw.writeInt32LE(this.version);
         bw.writeVec3(scale);
