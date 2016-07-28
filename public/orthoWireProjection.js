@@ -187,7 +187,6 @@ angular.module('mdlr')
         restrict: 'E',
         scope: {
             model: '=',
-            frame: '=',
             mv: '=',
             selectedVerts: '=',
             toolState: '='
@@ -254,7 +253,7 @@ angular.module('mdlr')
                 var closestVertDist = Infinity;
                 var closestVertIndex;
                 for (var ent of scene.entities) {
-                    var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
+                    var verts = ent.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
                     for (var i=0; i<verts.length; i++) {
                         var vert = verts[i];
                         var vertNDC = worldToNDC(vert);
@@ -279,7 +278,7 @@ angular.module('mdlr')
                 var yhindc = Math.max(y1ndc, y2ndc);
                 var vertsHitIndeces = [];
                 for (var ent of scene.entities) {
-                    var verts = ent.model.frames[$scope.frame].simpleFrame.verts;
+                    var verts = ent.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
                     for (var i=0; i<verts.length; i++) {
                         var vertNDC = worldToNDC(verts[i]);
                         if (vertNDC[0] > xlondc && vertNDC[0] < xhindc
@@ -317,7 +316,7 @@ angular.module('mdlr')
                 var delta = vec4.create();
                 vec4.subtract(delta, toObj, fromObj);
                 $scope.selectedVerts.forEach((vertIndex) => {
-                    var vert = $scope.model.frames[$scope.frame].simpleFrame.verts[vertIndex];
+                    var vert = $scope.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts[vertIndex];
                     vert.x += delta[0];
                     vert.y += delta[1];
                     vert.z += delta[2];
@@ -488,7 +487,7 @@ angular.module('mdlr')
                 vertices = [];
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
-                    var frameverts = mdl.frames[$scope.frame].simpleFrame.verts;
+                    var frameverts = mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
                     for (vert of frameverts) {
                         vertices.push(vert.x, vert.y, vert.z);
                     }
@@ -503,7 +502,7 @@ angular.module('mdlr')
                 gl.useProgram(vertShaderProgram);
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
-                    for (vert of mdl.frames[$scope.frame].simpleFrame.verts) {
+                    for (vert of mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts) {
                         verts.push(vert.x, vert.y, vert.z);
                     }
                     gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
@@ -524,9 +523,9 @@ angular.module('mdlr')
             sizeCanvasToContainer();
 
             var vertIndexBuffer = gl.createBuffer();
-            $scope.$watchGroup(['model', 'frame'], (newvals) => {
-                if (!newvals[0]) return;
-                scene.entities = [{model: newvals[0], frame: newvals[1]}];
+            $scope.$watch('model', (newval) => {
+                if (!newval) return;
+                scene.entities = [{model: newval}];
             });
             $scope.$watchCollection('model.triangles', (tris) => {
                 var vertIndeces = [];

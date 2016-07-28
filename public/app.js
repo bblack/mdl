@@ -247,15 +247,21 @@ angular.module('mdlr', [])
 })
 .controller('ControlsController', function($scope, $interval, $rootScope, $element){
     $scope.TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
+    var lastTickTime;
+    function lerpFrame(){
+        if (!lastTickTime) lastTickTime = Date.now();
+        var newTickTime = Date.now();
+        var lerp = (newTickTime - lastTickTime) / 100;
+        lastTickTime = newTickTime;
+        $rootScope.frame = ($rootScope.frame + lerp) % $scope.model.frames.length
+        if ($scope.playing) requestAnimationFrame(lerpFrame);
+    }
     $scope.play = function(){
         if ($scope.playing) { return; }
-
-        $scope.playing = $interval(function(){
-            $rootScope.frame = ($rootScope.frame + 1) % $scope.model.frames.length;
-        }, 100);
+        $scope.playing = true;
+        lerpFrame();
     };
     $scope.stop = function(){
-        $interval.cancel($scope.playing);
         delete $scope.playing;
     };
     $scope.open = function(evt){

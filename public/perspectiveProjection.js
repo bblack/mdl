@@ -116,7 +116,6 @@ angular.module('mdlr')
         restrict: 'E',
         scope: {
             model: '=',
-            frame: '=',
             mv: '='
         },
         template: `<canvas ng-mousemove="mousemove($event)"
@@ -218,10 +217,21 @@ angular.module('mdlr')
                 vertices = [];
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
-                    var frameverts = mdl.frames[$scope.frame].simpleFrame.verts;
+                    var frame = $scope.$root.frame; // waiting for propagation would be slower
+                    var frame1 = Math.floor(frame);
+                    var frame2 = (Math.floor(frame) + 1) % (mdl.frames.length - 1);
+                    var lerp = frame - Math.floor(frame);
+                    var frame1verts = mdl.frames[frame1].simpleFrame.verts;
+                    var frame2verts = mdl.frames[frame2].simpleFrame.verts;
                     for (tri of mdl.triangles) {
                         for (var v=0; v<3; v++) {
-                            var vert = frameverts[tri.vertIndeces[v]];
+                            var vert1 = frame1verts[tri.vertIndeces[v]];
+                            var vert2 = frame2verts[tri.vertIndeces[v]];
+                            var vert = {
+                                x: (1-lerp)*vert1.x + lerp*vert2.x,
+                                y: (1-lerp)*vert1.y + lerp*vert2.y,
+                                z: (1-lerp)*vert1.z + lerp*vert2.z
+                            };
                             vertices.push(vert.x, vert.y, vert.z);
                         }
                     }
@@ -258,9 +268,9 @@ angular.module('mdlr')
                 bufferTexCoords(gl, texcoordsbuf, model.triangles,
                     model.texCoords, model.skinWidth, model.skinHeight);
             })
-            $scope.$watchGroup(['model', 'frame'], (newvals) => {
-                if (!newvals[0]) return;
-                scene.entities = [{model: newvals[0], frame: newvals[1]}];
+            $scope.$watch('model', (newval) => {
+                if (!newval) return;
+                scene.entities = [{model: newval}];
             });
         }
     }
