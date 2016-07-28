@@ -82,7 +82,7 @@
             <div>
                 <h3>File</h3>
                 <input type='file' id='file'
-                    onchange='angular.element(this).scope().open()'>Open</input>
+                    onchange='angular.element(this).scope().open()'></input>
                 <button type='button' ng-click='save()'>Save</button>
             </div>
             <h3>Model info</h3>
@@ -97,18 +97,18 @@
                 </tr>
                 <tr>
                     <td>Frames</td>
-                    <td>{{ model.numFrames }}</td>
+                    <td>{{ model.frames.length }}</td>
                 </tr>
                 <tr>
                     <td>Skins</td>
-                    <td>{{ model.numSkins }}</td>
+                    <td>{{ model.skins.length }}</td>
                 </tr>
             </table>
             <hr/>
 
             <h3>Animation</h3>
             <input type='range'
-                min='0' max='{{ model.numFrames - 1 }}'
+                min='0' max='{{ model.frames.length - 1 }}'
                 ng-model='$root.frame' ng-change='stop()' />
             <button ng-if='!playing' ng-click='play()'>play</button>
             <button ng-if='playing' ng-click='stop()'>stop</button>
