@@ -219,7 +219,8 @@ angular.module('mdlr')
                     var mdl = ent.model;
                     var frame = $scope.$root.frame; // waiting for propagation would be slower
                     var frame1 = Math.floor(frame);
-                    var frame2 = (Math.floor(frame) + 1) % (mdl.frames.length - 1);
+                    var frame2 = mdl.frames.length == 1 ? frame1 :
+                        (Math.floor(frame) + 1) % (mdl.frames.length - 1);
                     var lerp = frame - Math.floor(frame);
                     var frame1verts = mdl.frames[frame1].simpleFrame.verts;
                     var frame2verts = mdl.frames[frame2].simpleFrame.verts;
