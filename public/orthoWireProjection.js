@@ -1,5 +1,4 @@
-angular.module('mdlr')
-.directive('orthoWireProjection', function(){
+export default function(){
     function createAxisShaderProgram(gl){
         var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(axisvertshader, `
@@ -484,11 +483,11 @@ angular.module('mdlr')
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 gl.useProgram(shaderProgram);
 
-                vertices = [];
+                var vertices = [];
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
                     var frameverts = mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
-                    for (vert of frameverts) {
+                    for (var vert of frameverts) {
                         vertices.push(vert.x, vert.y, vert.z);
                     }
                     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -502,7 +501,7 @@ angular.module('mdlr')
                 gl.useProgram(vertShaderProgram);
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
-                    for (vert of mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts) {
+                    for (var vert of mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts) {
                         verts.push(vert.x, vert.y, vert.z);
                     }
                     gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
@@ -543,4 +542,4 @@ angular.module('mdlr')
             });
         }
     }
-})
+}

@@ -1,3 +1,13 @@
+// import { createRoot } from 'react-dom/client';
+//
+// document.body.innerHTML = '<div id="app"></div>';
+//
+// const root = createRoot(document.getElementById("app"));
+// root.render(<h1>Hello, world</h1>);
+
+import orthoWireProjection from './orthoWireProjection.js';
+import perspectiveProjection from './perspectiveProjection.js';
+
 angular.module('mdlr', [])
 .factory('Mdl', function(){
     function Mdl(obj){
@@ -317,7 +327,10 @@ angular.module('mdlr', [])
 
     return norms;
 })
+.directive('orthoWireProjection', orthoWireProjection)
+.directive('perspectiveProjection', perspectiveProjection)
 .run(($rootScope, Mdl) => {
+  console.log('running!');
     $rootScope.toolState = {
         $name: 'single',
         get: () => $rootScope.toolState.$name,

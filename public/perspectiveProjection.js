@@ -1,5 +1,4 @@
-angular.module('mdlr')
-.directive('perspectiveProjection', function(){
+export default function(){
     function createAxisShaderProgram(gl){
         var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(axisvertshader, `
@@ -102,7 +101,7 @@ angular.module('mdlr')
     function bufferTexCoords(gl, buf, mdlTris, mdlTexCoords, width, height){
         var texcoords = [];
         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        for (tri of mdlTris) {
+        for (var tri of mdlTris) {
             for (var v=0; v<3; v++) {
                 var uv = mdlTexCoords[tri.vertIndeces[v]];
                 texcoords.push((uv.s / width) +
@@ -214,7 +213,7 @@ angular.module('mdlr')
                 gl.bindTexture(gl.TEXTURE_2D, tex); // t
                 gl.uniform1i(gl.getUniformLocation(shaderProgram, 'uSampler'), 0); // f
 
-                vertices = [];
+                var vertices = [];
                 for (var ent of scene.entities) {
                     var mdl = ent.model;
                     var frame = $scope.$root.frame; // waiting for propagation would be slower
@@ -224,7 +223,7 @@ angular.module('mdlr')
                     var lerp = frame - Math.floor(frame);
                     var frame1verts = mdl.frames[frame1].simpleFrame.verts;
                     var frame2verts = mdl.frames[frame2].simpleFrame.verts;
-                    for (tri of mdl.triangles) {
+                    for (var tri of mdl.triangles) {
                         for (var v=0; v<3; v++) {
                             var vert1 = frame1verts[tri.vertIndeces[v]];
                             var vert2 = frame2verts[tri.vertIndeces[v]];
@@ -275,4 +274,4 @@ angular.module('mdlr')
             });
         }
     }
-})
+}

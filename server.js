@@ -19,4 +19,6 @@ var app = express()
     res.json(out);
 });
 
-app.listen(8088);
+app.listen(8088, function() {
+  console.log(`listening at http://localhost:${this.address().port}/`);
+});
