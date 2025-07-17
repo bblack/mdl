@@ -5,8 +5,8 @@
 // const root = createRoot(document.getElementById("app"));
 // root.render(<h1>Hello, world</h1>);
 
-import orthoWireProjection from './orthoWireProjection.js';
-import perspectiveProjection from './perspectiveProjection.js';
+import orthoWireProjection from './public/orthoWireProjection.js';
+import perspectiveProjection from './public/perspectiveProjection.js';
 
 angular.module('mdlr', [])
 .factory('Mdl', function(){
@@ -340,4 +340,8 @@ angular.module('mdlr', [])
         $rootScope.model = Mdl.fromBuffer(buf);
         $rootScope.frame = 0;
     })
+});
+
+angular.element(function() {
+  angular.bootstrap(document, ['mdlr']);
 });
