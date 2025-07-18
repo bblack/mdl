@@ -1,6 +1,7 @@
-<html>
+<html lang="en">
     <head>
-        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <script async="" src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
         <script type="importmap">
           {
@@ -10,27 +11,7 @@
             }
           }
         </script>
-        <script type='text/javascript' src='/public/components/buffer/buffer.js'></script>
-        <script type='text/javascript' src='/public/components/gl-matrix/dist/gl-matrix.js'></script>
-        <script type='text/javascript' src='/public/components/jquery/dist/jquery.js'></script>
-        <script type='text/javascript' src='/public/components/underscore/underscore.js'></script>
-        <script type='text/javascript' src='/public/components/angular/angular.min.js'></script>
-        <script type='text/babel' data-type='module' src='/public/app.js'></script>
-        <script type='text/babel' data-type='module' src='/public/orthoWireProjection.js'></script>
-        <script type='text/babel' data-type='module' src='/public/perspectiveProjection.js'></script>
-        <script type='text/babel' data-type='module' >
-          // import orthoWireProjection from './public/orthoWireProjection.js';
-          // import orthoWireProjection from 'orthoWireProjection';
-          // import perspectiveProjection from './public/perspectiveProjection.js';
-          // angular.module('mdlr')
-            // .directive('orthoWireProjection', orthoWireProjection)
-            // .directive('perspectiveProjection', perspectiveProjection);
-          debugger;
-          angular.element(function() {
-            console.log('botstrappin');
-            angular.bootstrap(document, ['mdlr']);
-          });
-        </script>
+        <script type='module' src='/app.js'></script>
         <style type='text/css'>
             body {
                 margin: 0;
@@ -171,5 +152,8 @@
                 mv='[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]'>
             </perspective-projection>
         </div>
+        <!-- new shit here: -->
+        <div id="root"></div>
+        <script type="module" src="/src/main.jsx"></script>
     </body>
 </html>

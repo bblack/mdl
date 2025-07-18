@@ -1,0 +1,36 @@
+{
+  "name": "gl-matrix",
+  "homepage": "http://glmatrix.net",
+  "authors": [
+    "Brandon Jones <tojiro@gmail.com>",
+    "Colin MacKenzie IV <sinisterchipmunk@gmail.com>"
+  ],
+  "description": "Javascript Matrix and Vector library for High Performance WebGL apps",
+  "main": "dist/gl-matrix-min.js",
+  "ignore": [
+    "**/.*",
+    "jsdoc-template",
+    "spec",
+    "tasks",
+    "Gemfile",
+    "Gemfile.lock",
+    "Rakefile",
+    "TESTING.md"
+  ],
+  "keywords": [
+    "webGL",
+    "matrix",
+    "vector"
+  ],
+  "license": "MIT",
+  "version": "2.8.1",
+  "_release": "2.8.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "v2.8.1",
+    "commit": "6866ae93d19bbff032139941cbfe0ae68c4cdead"
+  },
+  "_source": "https://github.com/toji/gl-matrix.git",
+  "_target": "^2.3.2",
+  "_originalSource": "gl-matrix"
+}
