@@ -270,44 +270,75 @@ angular.module('mdlr', [])
     }
     return Mdl;
 })
+.controller('RootController', function($scope) {
+  var lastTickTime;
+
+  $scope.$on('clickPlay', ($evt) => {
+    if ($scope.playing) { return; }
+    $scope.playing = true;
+    lerpFrame();
+  });
+
+  $scope.$on('clickStop', ($evt) => {
+    $scope.playing = false;
+  });
+
+  $scope.$on('open', ($evt) => {
+    var file = $element.find('input#file')[0].files[0];
+    var fr = new FileReader();
+    fr.onloadend = (a,b,c) => {
+        if (fr.readyState != FileReader.DONE) throw 'status bad';
+        var arraybuffer = fr.result;
+        var buf = new buffer.Buffer(new Uint8Array(arraybuffer));
+        $scope.$apply(() => $scope.$emit('modelbuffer', buf));
+    }
+    fr.readAsArrayBuffer(file);
+  });
+
+  $scope.$on('save', ($evt) => {
+    var mdlbuf = $scope.model.toBuffer();
+    var mdlblob = new Blob([mdlbuf], {type: 'application/octet-stream'});
+    window.location = URL.createObjectURL(mdlblob);
+  });
+
+  function lerpFrame(){
+    if (!$scope.playing) {
+      lastTickTime = null;
+      $scope.frame = Math.floor($scope.frame);
+      return;
+    }
+
+    if (!lastTickTime) lastTickTime = Date.now();
+    var newTickTime = Date.now();
+    var lerp = (newTickTime - lastTickTime) / 100;
+
+    lastTickTime = newTickTime;
+    $scope.frame = ($scope.frame + lerp) % $scope.model.frames.length;
+
+    requestAnimationFrame(lerpFrame);
+  }
+})
 .controller('ControlsController', function($scope, $interval, $rootScope, $element){
     $scope.TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
-    var lastTickTime;
-    function lerpFrame(){
-        if (!lastTickTime) lastTickTime = Date.now();
-        var newTickTime = Date.now();
-        var lerp = (newTickTime - lastTickTime) / 100;
-        lastTickTime = newTickTime;
-        $rootScope.frame = ($rootScope.frame + lerp) % $scope.model.frames.length
-        if ($scope.playing) {
-            requestAnimationFrame(lerpFrame);
-        } else {
-            $rootScope.frame = Math.floor($rootScope.frame);
-        }
-    }
+
+    // here, i think, we should emit this change upward in the same way that we do when a new model is loaded:
+    //
+    // 1. $scope.$emit from here
+    // 2. $rootScope.$on to react (and store) at root level
+    // 3. within that, store and set $rootScope.playing and $rootScope.frame
+    //
+    // maybe that will solve the porblem of perspective pane not being alerted to changes in $scope.$root.frame?
     $scope.play = function(){
-        if ($scope.playing) { return; }
-        $scope.playing = true;
-        lerpFrame();
+      $scope.$emit('clickPlay');
     };
     $scope.stop = function(){
-        delete $scope.playing;
+      $scope.$emit('clickStop');
     };
     $scope.open = function(evt){
-        var file = $element.find('input#file')[0].files[0];
-        var fr = new FileReader();
-        fr.onloadend = (a,b,c) => {
-            if (fr.readyState != FileReader.DONE) throw 'status bad';
-            var arraybuffer = fr.result;
-            var buf = new buffer.Buffer(new Uint8Array(arraybuffer));
-            $scope.$apply(() => $scope.$emit('modelbuffer', buf));
-        }
-        fr.readAsArrayBuffer(file);
+      $scope.$emit('open');
     }
     $scope.save = function(){
-        var mdlbuf = $scope.model.toBuffer();
-        var mdlblob = new Blob([mdlbuf], {type: 'application/octet-stream'});
-        window.location = URL.createObjectURL(mdlblob);
+      $scope.$emit('save');
     }
 })
 .controller('QuadViewController', function($scope, $rootScope, $http){

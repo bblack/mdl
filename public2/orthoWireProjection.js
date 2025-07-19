@@ -191,7 +191,8 @@ export default function(){
             model: '=',
             mv: '=',
             selectedVerts: '=',
-            toolState: '='
+            toolState: '=',
+            frame: '='
         },
         template: `
           <canvas
