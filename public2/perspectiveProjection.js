@@ -12,22 +12,20 @@ export default function(){
         },
         template: ``,
         link: function($scope, $element){
-          debugger;
-
+          console.log('linking perspectiveProjection')
+          const scene = {};
           const container = $element[0];
           const reactRoot = createRoot(container);
           // ^ apparently you do this ONCE EVER on an element. the second time, you get this error in the console:
           //   > You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it.
 
-          const renderReactEl = (model, frame, palette) => {
-            debugger;
+          const renderReactEl = (scene) => {
+            console.log('rendering react element')
             const reactEl = React.createElement(
               PerspectiveProjection, // html el/react el
               { // attrs/params
                 mv: $scope.mv,
-                model: model,
-                frame: frame,
-                palette: palette
+                scene: scene
               },
               "" // contents/children
             )
@@ -35,42 +33,41 @@ export default function(){
             reactRoot.render(reactEl);
           }
 
-          $scope.$watch('model',
-            // function() {
-            //   return {
-            //     var model = $scope.model;
-            //     var frame = $scope.$root.frame;
-            //     var palette = $scope.$root.palette;
-            //   };
-            // },
+          $scope.$watch('frame', (x) => {
+            debugger;
+            $scope.frame = x;
+          });
+
+          $scope.$watchCollection(
+            () => {
+              console.log('frame is now ' + $scope.$root.frame);
+              return {
+                model: $scope.model,
+                frame: $scope.$root.frame,
+                palette: $scope.$root.palette
+              };
+            },
             (o) => {
-              const model = $scope.model;
-              const frame = $scope.$root.frame;
-              const palette = $scope.$root.palette;
-              debugger;
+              const model = o.model;
+              const frame = o.frame;
+              const palette = o.palette;
+
               if (!model) return;
-              // if (!frame) return;
               if (!palette) return;
 
-              renderReactEl(model, frame, palette);
+              scene.palette = palette;
+              scene.entities = [
+                {model: model, frame: frame}
+              ];
+
+              renderReactEl(scene);
             }
           );
 
           return;
 
           // -- old crap --
-            var aspect;
 
-            var $canvas = $element.find('canvas');
-            var n = 1;
-            var f = 100;
-            var perspectiveMatrix;
-            var scene = {
-                entities: []
-            };
-            var pitch = 0;
-            var yaw = 0;
-            var lastScreenPos;
             $scope.mousedown = (evt) => {
                 lastScreenPos = [evt.offsetX, evt.offsetY];
             }
@@ -88,27 +85,6 @@ export default function(){
                 lastScreenPos = [evt.offsetX, evt.offsetY];
             }
 
-            $scope.$watch('model', (model) => {
-                if (!model) return;
-
-                var pixels = new Uint8Array(model.skinWidth * model.skinHeight * 4);
-                pixels.fill(0xff);
-                model.skins[0].data.data.forEach((palidx, pixnum) => {
-                    var rgb = $scope.$root.palette[palidx];
-                    pixels.set(rgb, pixnum * 4);
-                });
-                loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
-            })
-            $scope.$watchCollection('model.triangles', () => {
-                var model = $scope.model;
-                if (!model) return;
-                bufferTexCoords(gl, texcoordsbuf, model.triangles,
-                    model.texCoords, model.skinWidth, model.skinHeight);
-            })
-            $scope.$watch('model', (newval) => {
-                if (!newval) return;
-                scene.entities = [{model: newval}];
-            });
         }
     }
 };

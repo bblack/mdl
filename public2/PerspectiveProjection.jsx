@@ -1,5 +1,5 @@
 import { mat4, vec3 } from './components/gl-matrix/lib/gl-matrix.js';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function createAxisShaderProgram(gl){
     var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
@@ -152,19 +152,16 @@ function setCamSpaceMatrix(mv, pitch, yaw, gl, axisShaderProgram, shaderProgram)
     gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
 }
 
-export default function PerspectiveProjection({mv, frame, model, palette}) {
-  console.log('PerspectiveProjection rendering');
-  debugger;
+export default function PerspectiveProjection({mv, scene}) {
+  console.log('PerspectiveProjection entered');
 
   // const frameRef = useRef(frame);
-  const modelRef = useRef(model);
+  // const modelRef = useRef(model);
   // const paletteRef = useRef(palette);
   const canvasRef = useRef(null);
 
   const pitch = 0;
   const yaw = 0;
-  const entities = model ? [{model: model}] : [];
-  const scene = {entities: entities};
 
   function onMouseMove() {
     console.warn('onMouseMove not implemented');
@@ -178,8 +175,9 @@ export default function PerspectiveProjection({mv, frame, model, palette}) {
   // - do NOT want to kick off new render loop on re-render though, if canvas is from prior render, since we already have a render loop going.
   //
   useEffect(() => {
-    debugger;
+    console.log('PerspectiveProjection: useEffect entered');
     const canvas = canvasRef.current;
+    debugger;
     canvas.id = new Date().toISOString();
     const gl = canvas.getContext('webgl');
 
@@ -212,6 +210,8 @@ export default function PerspectiveProjection({mv, frame, model, palette}) {
     sizeCanvasToContainer(canvasRef.current, gl, axisShaderProgram, shaderProgram);
 
     function render() {
+        // const frame = frameRef.current;
+
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.useProgram(shaderProgram);
@@ -223,6 +223,7 @@ export default function PerspectiveProjection({mv, frame, model, palette}) {
         var vertices = [];
         for (var ent of scene.entities) {
             var mdl = ent.model;
+            const frame = ent.frame;
             var frame1 = Math.floor(frame);
             var frame2 = mdl.frames.length == 1 ? frame1 :
                 (Math.floor(frame) + 1) % (mdl.frames.length - 1);
@@ -253,9 +254,11 @@ export default function PerspectiveProjection({mv, frame, model, palette}) {
 
         drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
-        // window.requestAnimationFrame(render);
+        window.requestAnimationFrame(render);
     }
 
+    const palette = scene.palette;
+    const model = scene.entities[0].model;
     var pixels = new Uint8Array(model.skinWidth * model.skinHeight * 4);
     pixels.fill(0xff);
     model.skins[0].data.data.forEach((palidx, pixnum) => {
@@ -269,7 +272,7 @@ export default function PerspectiveProjection({mv, frame, model, palette}) {
 
     // window.requestAnimationFrame(render);
     render();
-  });
+  }, [true]); // dependency on constant "true" so useEffect runs only on first render
 
   return (
     <canvas ref={canvasRef} onMouseMove={onMouseMove}
