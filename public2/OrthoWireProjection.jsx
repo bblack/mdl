@@ -172,9 +172,11 @@ function drawAxes(gl, shaderProgram, buf, vPosAtt, vColorAtt){
     gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
     gl.drawArrays(gl.LINES, 0, 6);
 }
-function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, numPoints){
+function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, selectedVerts){
+    const numPoints = selectedVerts.length;
     gl.useProgram(shaderProgram);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(selectedVerts), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
     gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
 }
@@ -189,21 +191,18 @@ function sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProg
   const container = canvas.parentElement;
   const w = container.clientWidth;
   const h = container.clientHeight;
-  const aspect = w/h;
-  const n = -100;
-  const f = 100;
-  const projectionMatrix = [
-      zoom/aspect, 0, 0, 0,
-      0, zoom, 0, 0,
-      0, 0, -2/(f-n), 0,
-      0, 0, -(f+n)/(f-n), 1.0
-  ];
 
   canvas.setAttribute('width', w);
   canvas.setAttribute('height', h);
 
+  // below here should probably be in some event listener instead
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
+  const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+  setProjectionMatrixUniforms(projectionMatrix, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
+}
+
+function setProjectionMatrixUniforms(projectionMatrix, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram) {
   gl.useProgram(vertShaderProgram);
   const vertProjMatrixU = gl.getUniformLocation(vertShaderProgram, 'projMatrix');
   gl.uniformMatrix4fv(vertProjMatrixU, false, new Float32Array(projectionMatrix));
@@ -219,6 +218,55 @@ function sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProg
   gl.useProgram(shaderProgram);
   const matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
   gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
+}
+
+function buildProjectionMatrix(w, h, zoom) {
+  const aspect = w/h;
+  const n = -100;
+  const f = 100;
+
+  return [
+      zoom/aspect, 0, 0, 0,
+      0, zoom, 0, 0,
+      0, 0, -2/(f-n), 0,
+      0, 0, -(f+n)/(f-n), 1.0
+  ];
+}
+
+function getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix) {
+    var cursorNDC = [
+        x / canvas.clientWidth * 2 - 1,
+        -(y / canvas.clientHeight * 2 - 1)
+    ];
+    var closestVertDist = Infinity;
+    var closestVertIndex;
+    for (var ent of scene.entities) {
+        const frame = ent.frame;
+        var verts = ent.model.frames[Math.floor(frame)].simpleFrame.verts;
+        for (var i=0; i<verts.length; i++) {
+            var vert = verts[i];
+            var vertNDC = worldToNDC(vert, camSpaceMatrix, projectionMatrix);
+            var dist = Math.pow(cursorNDC[0] - vertNDC[0], 2) +
+                Math.pow(cursorNDC[1] - vertNDC[1], 2);
+            if (dist < closestVertDist) {
+                closestVertDist = dist;
+                closestVertIndex = i;
+            }
+        }
+    }
+
+    return closestVertIndex;
+}
+
+function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
+    var vertNDC = [vert.x, vert.y, vert.z, 1];
+    vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
+    vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
+    return [
+        vertNDC[0] / vertNDC[3],
+        vertNDC[1] / vertNDC[3],
+        vertNDC[2] / vertNDC[3]
+    ];
 }
 
 export default function OrthoWireProjection({mv, scene, toolState}) {
@@ -284,9 +332,9 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
 
       sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
 
-      window.addEventListener('resize', () =>
-        sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram)
-      );
+      window.addEventListener('resize', () => {
+        sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
+      });
 
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
@@ -341,7 +389,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
           }
 
           drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
-              svPosAtt, selectedVerts.length);
+              svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
           if (toolState.get() == 'sweep.sweeping')
               drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
@@ -354,19 +402,36 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
   }, [true]); // dependency on constant "true" so useEffect runs only on first render
 
   function onMouseDown() {
-    console.warn("onMouseDown not yet implemented");
+    // console.warn("onMouseDown not yet implemented");
   }
 
   function onMouseUp() {
-    console.warn("onMouseUp not yet implemented");
+    // console.warn("onMouseUp not yet implemented");
   }
 
   function onMouseLeave() {
-    console.warn("onMouseLeave not yet implemented");
+    // console.warn("onMouseLeave not yet implemented");
   }
 
-  function onMouseMove() {
-    console.warn("onMouseMove not yet implemented");
+  function onMouseMove(evt) {
+    const canvas = canvasRef.current;
+    const _toolState = toolState.get();
+
+    switch (_toolState) {
+      case 'single':
+        const x = evt.nativeEvent.offsetX;
+        const y = evt.nativeEvent.offsetY;
+        const w = canvas.width;
+        const h = canvas.height;
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+        // TODO: scene ref was given to this component by parent. instead of manipulating scene directly, we should emit event and allow something up top to set it.
+        // but for now...
+        scene.selectedVerts = [closestVertIndex];
+        break;
+      default:
+        console.warn(`onMouseMove when toolState=${_toolState} is not yet implemented`);
+    }
   }
 
   function onWheel(evt) {
@@ -375,7 +440,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     const canvas = canvasRef.current;
 
     zoom *= Math.pow(1.1, -evt.nativeEvent.deltaY / 10);
-    // this is overkill. all we want is to compute and set the projection matrix, but that's inlined in this fn for now, so:
+    // this is overkill. all we want is to compute and set the projection matrix, and let that get put in the relevant uniforms in the shader programs. but that's inlined in this fn for now, so:
     sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
   }
 

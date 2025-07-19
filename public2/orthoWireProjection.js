@@ -126,38 +126,38 @@ export default function(){
             //     var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
             //     gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
             // }
-            function worldToNDC(vert){
-                var vertNDC = [vert.x, vert.y, vert.z, 1];
-                vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
-                vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
-                return [
-                    vertNDC[0] / vertNDC[3],
-                    vertNDC[1] / vertNDC[3],
-                    vertNDC[2] / vertNDC[3]
-                ];
-            }
-            function getClosestVert(x, y){
-                var cursorNDC = [
-                    x / $canvas[0].clientWidth * 2 - 1,
-                    -(y / $canvas[0].clientHeight * 2 - 1)
-                ];
-                var closestVertDist = Infinity;
-                var closestVertIndex;
-                for (var ent of scene.entities) {
-                    var verts = ent.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
-                    for (var i=0; i<verts.length; i++) {
-                        var vert = verts[i];
-                        var vertNDC = worldToNDC(vert);
-                        var dist = Math.pow(cursorNDC[0] - vertNDC[0], 2) +
-                            Math.pow(cursorNDC[1] - vertNDC[1], 2);
-                        if (dist < closestVertDist) {
-                            closestVertDist = dist;
-                            closestVertIndex = i;
-                        }
-                    }
-                }
-                return closestVertIndex;
-            }
+            // function worldToNDC(vert){
+            //     var vertNDC = [vert.x, vert.y, vert.z, 1];
+            //     vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
+            //     vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
+            //     return [
+            //         vertNDC[0] / vertNDC[3],
+            //         vertNDC[1] / vertNDC[3],
+            //         vertNDC[2] / vertNDC[3]
+            //     ];
+            // }
+            // function getClosestVert(x, y){
+            //     var cursorNDC = [
+            //         x / $canvas[0].clientWidth * 2 - 1,
+            //         -(y / $canvas[0].clientHeight * 2 - 1)
+            //     ];
+            //     var closestVertDist = Infinity;
+            //     var closestVertIndex;
+            //     for (var ent of scene.entities) {
+            //         var verts = ent.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
+            //         for (var i=0; i<verts.length; i++) {
+            //             var vert = verts[i];
+            //             var vertNDC = worldToNDC(vert);
+            //             var dist = Math.pow(cursorNDC[0] - vertNDC[0], 2) +
+            //                 Math.pow(cursorNDC[1] - vertNDC[1], 2);
+            //             if (dist < closestVertDist) {
+            //                 closestVertDist = dist;
+            //                 closestVertIndex = i;
+            //             }
+            //         }
+            //     }
+            //     return closestVertIndex;
+            // }
             function getVertsIn(x1, y1, x2, y2){
                 var x1ndc = x1 / $canvas[0].clientWidth * 2 - 1;
                 var y1ndc = y1 / $canvas[0].clientHeight * -2 + 1;
@@ -429,10 +429,10 @@ export default function(){
             //     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
             //     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
             // });
-            $scope.$watchCollection('selectedVerts', (newval) => {
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, selectedVertIndexBuf);
-                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(newval), gl.STATIC_DRAW);
-            });
+            // $scope.$watchCollection('selectedVerts', (newval) => {
+            //     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, selectedVertIndexBuf);
+            //     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(newval), gl.STATIC_DRAW);
+            // });
         }
     }
 };
