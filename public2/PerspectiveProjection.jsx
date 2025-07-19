@@ -192,11 +192,10 @@ export default function PerspectiveProjection({mv, scene}) {
     const canvas = canvasRef.current;
     const gl = canvas.getContext('webgl');
 
-    canvas.id = new Date().toISOString();
+    window.addEventListener('resize', () => {
+      sizeCanvasToContainer(canvasRef.current, gl, axisShaderProgram, shaderProgram)
+    });
 
-    // window.addEventListener('resize', () => {
-    //   sizeCanvasToContainer(canvasRef.current, gl, axisShaderProgram, shaderProgram)
-    // });
     gl.enable(gl.DEPTH_TEST);
 
     var axesbuf = bufferAxes(gl);
@@ -221,7 +220,6 @@ export default function PerspectiveProjection({mv, scene}) {
     sizeCanvasToContainer(canvasRef.current, gl, axisShaderProgram, shaderProgram);
 
     function render() {
-        // const frame = frameRef.current;
         const pitch = pitchRef.current;
         const yaw = yawRef.current;
 
