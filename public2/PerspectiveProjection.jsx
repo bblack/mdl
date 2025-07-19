@@ -155,20 +155,35 @@ function setCamSpaceMatrix(mv, pitch, yaw, gl, axisShaderProgram, shaderProgram)
 export default function PerspectiveProjection({mv, scene}) {
   console.log('PerspectiveProjection entered');
 
-  // const frameRef = useRef(frame);
-  // const modelRef = useRef(model);
-  // const paletteRef = useRef(palette);
   const canvasRef = useRef(null);
+  const pitchRef = useRef(0);
+  const yawRef = useRef(0);
+  const lastScreenPosRef = useRef(null);
 
-  const pitch = 0;
-  const yaw = 0;
+  function onMouseMove(evt) {
+    // evt is react's SyntheticBaseEvent. we might use movementX/Y from that instead of computing our own but for now...
+    evt = evt.nativeEvent;
 
-  function onMouseMove() {
-    console.warn('onMouseMove not implemented');
-  }
+    if (evt.buttons & 1) {
+      const curScreenPos = [evt.offsetX, evt.offsetY];
+      const lastScreenPos = lastScreenPosRef.current || curScreenPos;
+      var pitch = pitchRef.current;
+      var yaw = yawRef.current;
 
-  function onMouseDown() {
-    console.warn('onMouseDown not implemented');
+      pitch += (curScreenPos[1] - lastScreenPos[1]) * 0.02;
+      while (pitch > Math.PI*2) pitch -= Math.PI*2;
+      while (pitch < 0) pitch += Math.PI*2;
+
+      yaw += (curScreenPos[0] - lastScreenPos[0]) * 0.02;
+      while (yaw > Math.PI*2) yaw -= Math.PI*2;
+      while (yaw < 0) yaw += Math.PI*2;
+
+      yawRef.current = yaw;
+      pitchRef.current = pitch;
+      lastScreenPosRef.current = curScreenPos;
+    }
+
+    console.log('yawRef.current is now ' + yawRef.current);
   }
 
   // - must useEffect here, since we depend on canvasRef.current, which is not available until after render.
@@ -177,9 +192,9 @@ export default function PerspectiveProjection({mv, scene}) {
   useEffect(() => {
     console.log('PerspectiveProjection: useEffect entered');
     const canvas = canvasRef.current;
-    debugger;
-    canvas.id = new Date().toISOString();
     const gl = canvas.getContext('webgl');
+
+    canvas.id = new Date().toISOString();
 
     // window.addEventListener('resize', () => {
     //   sizeCanvasToContainer(canvasRef.current, gl, axisShaderProgram, shaderProgram)
@@ -201,8 +216,6 @@ export default function PerspectiveProjection({mv, scene}) {
     var vertexTexCoordAttribute = gl.getAttribLocation(shaderProgram, "aVertexTexCoord");
     gl.enableVertexAttribArray(vertexTexCoordAttribute);
 
-    setCamSpaceMatrix(mv, pitch, yaw, gl, axisShaderProgram, shaderProgram);
-
     var buf = gl.createBuffer();
     var texcoordsbuf = gl.createBuffer();
     var tex = gl.createTexture();
@@ -211,10 +224,14 @@ export default function PerspectiveProjection({mv, scene}) {
 
     function render() {
         // const frame = frameRef.current;
+        const pitch = pitchRef.current;
+        const yaw = yawRef.current;
 
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.useProgram(shaderProgram);
+
+        setCamSpaceMatrix(mv, pitch, yaw, gl, axisShaderProgram, shaderProgram);
 
         gl.activeTexture(gl.TEXTURE0); // w
         gl.bindTexture(gl.TEXTURE_2D, tex); // t
@@ -270,13 +287,10 @@ export default function PerspectiveProjection({mv, scene}) {
     bufferTexCoords(gl, texcoordsbuf, model.triangles,
         model.texCoords, model.skinWidth, model.skinHeight);
 
-    // window.requestAnimationFrame(render);
     render();
   }, [true]); // dependency on constant "true" so useEffect runs only on first render
 
   return (
-    <canvas ref={canvasRef} onMouseMove={onMouseMove}
-      onMouseDown={onMouseDown}
-      ></canvas>
+    <canvas ref={canvasRef} onMouseMove={onMouseMove}></canvas>
   );
 }
