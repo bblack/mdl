@@ -1,0 +1,372 @@
+import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
+import { useEffect, useRef, useState } from 'react';
+
+function createAxisShaderProgram(gl){
+    var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(axisvertshader, `
+        attribute vec3 aVertexPos;
+        attribute vec3 aVertexColor;
+        uniform mat4 matrix;
+        uniform mat4 camSpaceMatrix;
+        varying lowp vec4 vcolor;
+        void main(void) {
+            gl_Position = matrix * camSpaceMatrix * vec4(aVertexPos, 1.0);
+            vcolor = vec4(aVertexColor, 0.0);
+        }
+    `);
+    gl.compileShader(axisvertshader);
+    if (!gl.getShaderParameter(axisvertshader, gl.COMPILE_STATUS))
+        throw new Error(gl.getShaderInfoLog(axisvertshader));
+    var axisfragshader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(axisfragshader, `
+        varying lowp vec4 vcolor;
+        void main(void) {
+            gl_FragColor = vcolor;
+        }
+    `);
+    gl.compileShader(axisfragshader);
+    if (!gl.getShaderParameter(axisfragshader, gl.COMPILE_STATUS))
+        throw new Error(gl.getShaderInfoLog(axisfragshader));
+    var axisShaderProgram = gl.createProgram();
+    gl.attachShader(axisShaderProgram, axisvertshader);
+    gl.attachShader(axisShaderProgram, axisfragshader);
+    gl.linkProgram(axisShaderProgram);
+    return axisShaderProgram;
+}
+function createModelShaderProgram(gl){
+    var vertshader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertshader, `
+        attribute vec3 aVertexPosition;
+        uniform mat4 matrix;
+        uniform mat4 camSpaceMatrix;
+        void main(void){
+            gl_Position = matrix * camSpaceMatrix * vec4(aVertexPosition, 1.0);
+        }
+    `);
+    gl.compileShader(vertshader);
+    if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(vertshader));
+    }
+    var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragshader, `
+        void main(void){
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    `);
+    gl.compileShader(fragshader);
+    if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(fragshader));
+    }
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertshader);
+    gl.attachShader(shaderProgram, fragshader);
+    gl.linkProgram(shaderProgram);
+    return shaderProgram;
+}
+function createVertShaderProgram(gl){
+    var vertshader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertshader, `
+        attribute vec3 aVertPos;
+        uniform mat4 projMatrix;
+        uniform mat4 camSpaceMatrix;
+        void main(void){
+            gl_Position = projMatrix * camSpaceMatrix * vec4(aVertPos, 1.0);
+            gl_PointSize = 4.0;
+        }
+    `);
+    gl.compileShader(vertshader);
+    if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS))
+        throw new Error(gl.getShaderInfoLog(vertshader));
+    var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragshader, `
+        void main(void){
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    `);
+    gl.compileShader(fragshader);
+    if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS))
+        throw new Error(gl.getShaderInfoLog(fragshader));
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertshader);
+    gl.attachShader(shaderProgram, fragshader);
+    gl.linkProgram(shaderProgram);
+    return shaderProgram;
+}
+function createSelectedVertShaderProgram(gl){
+    var vertshader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertshader, `
+        attribute vec3 aVertPos;
+        uniform mat4 projMatrix;
+        uniform mat4 camSpaceMatrix;
+        void main(void){
+            gl_Position = projMatrix * camSpaceMatrix * vec4(aVertPos, 1.0);
+            gl_PointSize = 8.0;
+        }
+    `);
+    gl.compileShader(vertshader);
+    if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(vertshader));
+    }
+    var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragshader, `
+        void main(void){
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    `);
+    gl.compileShader(fragshader);
+    if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(fragshader));
+    }
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertshader);
+    gl.attachShader(shaderProgram, fragshader);
+    gl.linkProgram(shaderProgram);
+    return shaderProgram;
+}
+function createSweepShaderProgram(gl){
+    var vertshader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertshader, `
+        attribute vec3 aVertPos;
+        void main(void){
+            gl_Position = vec4(aVertPos, 1.0);
+        }
+    `);
+    gl.compileShader(vertshader);
+    if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(vertshader));
+    }
+    var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragshader, `
+        void main(void){
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 0.1);
+        }
+    `);
+    gl.compileShader(fragshader);
+    if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(fragshader));
+    }
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertshader);
+    gl.attachShader(shaderProgram, fragshader);
+    gl.linkProgram(shaderProgram);
+    return shaderProgram;
+}
+function bufferAxes(gl){
+    var axesbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
+    var axisverts = [ // x,y,z,r,g,b
+        0, 0, 0, 1, 0, 0,
+        10, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 1, 0,
+        0, 10, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 1,
+        0, 0, 10, 0, 0, 1
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
+    return axesbuf;
+}
+function drawAxes(gl, shaderProgram, buf, vPosAtt, vColorAtt){
+    gl.useProgram(shaderProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.vertexAttribPointer(vPosAtt, 3, gl.FLOAT, false, 6*4, 0);
+    gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
+    gl.drawArrays(gl.LINES, 0, 6);
+}
+function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, numPoints){
+    gl.useProgram(shaderProgram);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
+    gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
+    gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
+}
+function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt){
+    gl.useProgram(sweepShaderProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, sweepBoxVertBuf);
+    gl.vertexAttribPointer(swPosAtt, 3, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+}
+
+function sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram) {
+  const container = canvas.parentElement;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const aspect = w/h;
+  const n = -100;
+  const f = 100;
+  const zoom = 1/40;
+  const projectionMatrix = [
+      zoom/aspect, 0, 0, 0,
+      0, zoom, 0, 0,
+      0, 0, -2/(f-n), 0,
+      0, 0, -(f+n)/(f-n), 1.0
+  ];
+
+  canvas.setAttribute('width', w);
+  canvas.setAttribute('height', h);
+
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+  gl.useProgram(vertShaderProgram);
+  const vertProjMatrixU = gl.getUniformLocation(vertShaderProgram, 'projMatrix');
+  gl.uniformMatrix4fv(vertProjMatrixU, false, new Float32Array(projectionMatrix));
+
+  gl.useProgram(svShaderProgram);
+  const svProjMatrixU = gl.getUniformLocation(svShaderProgram, 'projMatrix');
+  gl.uniformMatrix4fv(svProjMatrixU, false, new Float32Array(projectionMatrix));
+
+  gl.useProgram(axisShaderProgram);
+  const axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
+  gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
+
+  gl.useProgram(shaderProgram);
+  const matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
+  gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
+}
+
+export default function OrthoWireProjection({mv, scene, toolState}) {
+  console.log('OrthoWireProjection entered');
+
+  const canvasRef = useRef(null);
+  const camSpaceMatrix = mv;
+
+  useEffect(() => {
+      console.log('OrthoWireProjection: useEffect entered');
+      const canvas = canvasRef.current;
+      const gl = canvas.getContext('webgl');
+
+      // create shader programs
+
+      var sweepShaderProgram = createSweepShaderProgram(gl);
+      gl.useProgram(sweepShaderProgram);
+      var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
+      gl.enableVertexAttribArray(swPosAtt);
+
+      var svShaderProgram = createSelectedVertShaderProgram(gl);
+      gl.useProgram(svShaderProgram);
+      var svPosAtt = gl.getAttribLocation(svShaderProgram, 'aVertPos');
+      gl.enableVertexAttribArray(svPosAtt);
+      var svCamSpaceMatrixU = gl.getUniformLocation(svShaderProgram, 'camSpaceMatrix');
+      gl.uniformMatrix4fv(svCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
+
+      var axesbuf = bufferAxes(gl);
+      var axisShaderProgram = createAxisShaderProgram(gl);
+      gl.useProgram(axisShaderProgram);
+      var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
+      gl.enableVertexAttribArray(axisvertexposatt);
+      var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
+      gl.enableVertexAttribArray(axisvertcoloratt);
+      var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
+      gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
+
+      var vertShaderProgram = createVertShaderProgram(gl);
+      gl.useProgram(vertShaderProgram);
+      var vertShader_aVertPos = gl.getAttribLocation(vertShaderProgram, 'aVertPos');
+      gl.enableVertexAttribArray(vertShader_aVertPos);
+      var vertCamSpaceMatrixU = gl.getUniformLocation(vertShaderProgram, 'camSpaceMatrix');
+      gl.uniformMatrix4fv(vertCamSpaceMatrixU, false, camSpaceMatrix);
+      var vertBuf = gl.createBuffer();
+
+      var shaderProgram = createModelShaderProgram(gl);
+      gl.useProgram(shaderProgram);
+      var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+      gl.enableVertexAttribArray(vertexPositionAttribute);
+      var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
+      gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
+
+      var buf = gl.createBuffer(); // verts for lines in each poly
+      var vertIndexBuffer = gl.createBuffer();
+      var selectedVertIndexBuf = gl.createBuffer();
+      var sweepBoxVertBuf = gl.createBuffer();
+
+      sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
+
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+      function render(){
+          const selectedVerts = scene.selectedVerts;
+
+          gl.clearColor(0, 0, 0, 0);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          gl.useProgram(shaderProgram);
+
+          var vertices = [];
+          for (var ent of scene.entities) {
+              var mdl = ent.model;
+              const frame = ent.frame;
+              var frameverts = mdl.frames[Math.floor(frame)].simpleFrame.verts;
+              for (var vert of frameverts) {
+                  vertices.push(vert.x, vert.y, vert.z);
+              }
+
+              // triangles, i think:
+              var vertIndeces = [];
+              for (var tri of mdl.triangles || []) {
+                  vertIndeces.push(tri.vertIndeces[0], tri.vertIndeces[1],
+                      tri.vertIndeces[1], tri.vertIndeces[2],
+                      tri.vertIndeces[2], tri.vertIndeces[0]);
+              }
+
+              // fill this buffer w/ vertices, and bind it to an attribuet:
+              gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+              gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+              gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+              // then fill another buffer w/ triangles, and draw them:
+              gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
+              gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
+              gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
+          }
+
+          var verts = [];
+          gl.useProgram(vertShaderProgram);
+          for (var ent of scene.entities) {
+              var mdl = ent.model;
+              const frame = ent.frame;
+              for (var vert of mdl.frames[Math.floor(frame)].simpleFrame.verts) {
+                  verts.push(vert.x, vert.y, vert.z);
+              }
+              gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+              gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+              gl.vertexAttribPointer(vertShader_aVertPos, 3, gl.FLOAT, false, 0, 0);
+              gl.drawArrays(gl.POINTS, 0, vertices.length / 3);
+          }
+
+          drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
+              svPosAtt, selectedVerts.length);
+          drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
+          if (toolState.get() == 'sweep.sweeping')
+              drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
+
+          window.requestAnimationFrame(render);
+      }
+
+      render();
+
+  }, [true]); // dependency on constant "true" so useEffect runs only on first render
+
+  function onMouseDown() {
+    console.warn("onMouseDown not yet implemented");
+  }
+
+  function onMouseUp() {
+    console.warn("onMouseUp not yet implemented");
+  }
+
+  function onMouseLeave() {
+    console.warn("onMouseLeave not yet implemented");
+  }
+
+  function onMouseMove() {
+    console.warn("onMouseMove not yet implemented");
+  }
+
+  return (
+    <canvas
+        ref={canvasRef}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseLeave}
+        onMouseMove={onMouseMove}
+    ></canvas>
+  )
+}

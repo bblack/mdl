@@ -1,6 +1,5 @@
 import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { mat4, vec3 } from './components/gl-matrix/lib/gl-matrix.js';
 import PerspectiveProjection from './PerspectiveProjection.jsx';
 
 export default function(){
@@ -63,28 +62,6 @@ export default function(){
               renderReactEl(scene);
             }
           );
-
-          return;
-
-          // -- old crap --
-
-            $scope.mousedown = (evt) => {
-                lastScreenPos = [evt.offsetX, evt.offsetY];
-            }
-            $scope.mousemove = (evt) => {
-                if (evt.buttons & 1) {
-                    var curScreenPos = [evt.offsetX, evt.offsetY];
-                    pitch += (curScreenPos[1] - lastScreenPos[1]) * 0.02;
-                    while (pitch > Math.PI*2) pitch -= Math.PI*2;
-                    while (pitch < 0) pitch += Math.PI*2;
-                    yaw += (curScreenPos[0] - lastScreenPos[0]) * 0.02;
-                    while (yaw > Math.PI*2) yaw -= Math.PI*2;
-                    while (yaw < 0) yaw += Math.PI*2;
-                    setCamSpaceMatrix();
-                }
-                lastScreenPos = [evt.offsetX, evt.offsetY];
-            }
-
         }
     }
 };

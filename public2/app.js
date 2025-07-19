@@ -273,6 +273,8 @@ angular.module('mdlr', [])
 .controller('RootController', function($scope) {
   var lastTickTime;
 
+  $scope.selectedVerts = [];
+
   $scope.$on('clickPlay', ($evt) => {
     if ($scope.playing) { return; }
     $scope.playing = true;

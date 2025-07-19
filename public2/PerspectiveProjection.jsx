@@ -182,8 +182,6 @@ export default function PerspectiveProjection({mv, scene}) {
       pitchRef.current = pitch;
       lastScreenPosRef.current = curScreenPos;
     }
-
-    console.log('yawRef.current is now ' + yawRef.current);
   }
 
   // - must useEffect here, since we depend on canvasRef.current, which is not available until after render.

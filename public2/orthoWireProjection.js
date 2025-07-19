@@ -1,190 +1,11 @@
+import React, { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
+import OrthoWireProjection from './OrthoWireProjection.jsx';
 
 console.log('defining orthoWireProjection');
 export default function(){
-    function createAxisShaderProgram(gl){
-        var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(axisvertshader, `
-            attribute vec3 aVertexPos;
-            attribute vec3 aVertexColor;
-            uniform mat4 matrix;
-            uniform mat4 camSpaceMatrix;
-            varying lowp vec4 vcolor;
-            void main(void) {
-                gl_Position = matrix * camSpaceMatrix * vec4(aVertexPos, 1.0);
-                vcolor = vec4(aVertexColor, 0.0);
-            }
-        `);
-        gl.compileShader(axisvertshader);
-        if (!gl.getShaderParameter(axisvertshader, gl.COMPILE_STATUS))
-            throw new Error(gl.getShaderInfoLog(axisvertshader));
-        var axisfragshader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(axisfragshader, `
-            varying lowp vec4 vcolor;
-            void main(void) {
-                gl_FragColor = vcolor;
-            }
-        `);
-        gl.compileShader(axisfragshader);
-        if (!gl.getShaderParameter(axisfragshader, gl.COMPILE_STATUS))
-            throw new Error(gl.getShaderInfoLog(axisfragshader));
-        var axisShaderProgram = gl.createProgram();
-        gl.attachShader(axisShaderProgram, axisvertshader);
-        gl.attachShader(axisShaderProgram, axisfragshader);
-        gl.linkProgram(axisShaderProgram);
-        return axisShaderProgram;
-    }
-    function createModelShaderProgram(gl){
-        var vertshader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertshader, `
-            attribute vec3 aVertexPosition;
-            uniform mat4 matrix;
-            uniform mat4 camSpaceMatrix;
-            void main(void){
-                gl_Position = matrix * camSpaceMatrix * vec4(aVertexPosition, 1.0);
-            }
-        `);
-        gl.compileShader(vertshader);
-        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(vertshader));
-        }
-        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragshader, `
-            void main(void){
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-            }
-        `);
-        gl.compileShader(fragshader);
-        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(fragshader));
-        }
-        var shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertshader);
-        gl.attachShader(shaderProgram, fragshader);
-        gl.linkProgram(shaderProgram);
-        return shaderProgram;
-    }
-    function createVertShaderProgram(gl){
-        var vertshader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertshader, `
-            attribute vec3 aVertPos;
-            uniform mat4 projMatrix;
-            uniform mat4 camSpaceMatrix;
-            void main(void){
-                gl_Position = projMatrix * camSpaceMatrix * vec4(aVertPos, 1.0);
-                gl_PointSize = 4.0;
-            }
-        `);
-        gl.compileShader(vertshader);
-        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS))
-            throw new Error(gl.getShaderInfoLog(vertshader));
-        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragshader, `
-            void main(void){
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-            }
-        `);
-        gl.compileShader(fragshader);
-        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS))
-            throw new Error(gl.getShaderInfoLog(fragshader));
-        var shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertshader);
-        gl.attachShader(shaderProgram, fragshader);
-        gl.linkProgram(shaderProgram);
-        return shaderProgram;
-    }
-    function createSelectedVertShaderProgram(gl){
-        var vertshader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertshader, `
-            attribute vec3 aVertPos;
-            uniform mat4 projMatrix;
-            uniform mat4 camSpaceMatrix;
-            void main(void){
-                gl_Position = projMatrix * camSpaceMatrix * vec4(aVertPos, 1.0);
-                gl_PointSize = 8.0;
-            }
-        `);
-        gl.compileShader(vertshader);
-        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(vertshader));
-        }
-        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragshader, `
-            void main(void){
-                gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-            }
-        `);
-        gl.compileShader(fragshader);
-        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(fragshader));
-        }
-        var shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertshader);
-        gl.attachShader(shaderProgram, fragshader);
-        gl.linkProgram(shaderProgram);
-        return shaderProgram;
-    }
-    function createSweepShaderProgram(gl){
-        var vertshader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertshader, `
-            attribute vec3 aVertPos;
-            void main(void){
-                gl_Position = vec4(aVertPos, 1.0);
-            }
-        `);
-        gl.compileShader(vertshader);
-        if (!gl.getShaderParameter(vertshader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(vertshader));
-        }
-        var fragshader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragshader, `
-            void main(void){
-                gl_FragColor = vec4(1.0, 0.0, 0.0, 0.1);
-            }
-        `);
-        gl.compileShader(fragshader);
-        if (!gl.getShaderParameter(fragshader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(fragshader));
-        }
-        var shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertshader);
-        gl.attachShader(shaderProgram, fragshader);
-        gl.linkProgram(shaderProgram);
-        return shaderProgram;
-    }
-    function bufferAxes(gl){
-        var axesbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, axesbuf);
-        var axisverts = [ // x,y,z,r,g,b
-            0, 0, 0, 1, 0, 0,
-            10, 0, 0, 1, 0, 0,
-            0, 0, 0, 0, 1, 0,
-            0, 10, 0, 0, 1, 0,
-            0, 0, 0, 0, 0, 1,
-            0, 0, 10, 0, 0, 1
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisverts), gl.STATIC_DRAW);
-        return axesbuf;
-    }
-    function drawAxes(gl, shaderProgram, buf, vPosAtt, vColorAtt){
-        gl.useProgram(shaderProgram);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.vertexAttribPointer(vPosAtt, 3, gl.FLOAT, false, 6*4, 0);
-        gl.vertexAttribPointer(vColorAtt, 3, gl.FLOAT, false, 6*4, 3*4);
-        gl.drawArrays(gl.LINES, 0, 6);
-    }
-    function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, numPoints){
-        gl.useProgram(shaderProgram);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
-        gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
-        gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
-    }
-    function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt){
-        gl.useProgram(sweepShaderProgram);
-        gl.bindBuffer(gl.ARRAY_BUFFER, sweepBoxVertBuf);
-        gl.vertexAttribPointer(swPosAtt, 3, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
-    }
+
     return {
         restrict: 'E',
         scope: {
@@ -203,48 +24,108 @@ export default function(){
           ></canvas>
         `,
         link: function($scope, $element){
+          console.log('linking orthoWireProjection');
+
+          const scene = {
+            selectedVerts: $scope.selectedVerts
+          };
+          const container = $element[0];
+          const reactRoot = createRoot(container);
+          // ^ apparently you do this ONCE EVER on an element. the second time, you get this error in the console:
+          //   > You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot() before. Instead, call root.render() on the existing root instead if you want to update it.
+
+          const renderReactEl = (scene) => {
+            console.log('rendering react element')
+            const reactEl = React.createElement(
+              OrthoWireProjection, // html el/react el
+              { // attrs/params
+                mv: $scope.mv,
+                scene: scene,
+                toolState: $scope.toolState
+              },
+              "" // contents/children
+            )
+            // or, as jsx: (<StrictMode><OrthoWireProjection /></StrictMode>)
+            reactRoot.render(reactEl);
+          }
+
+          // $scope.$watch('frame', (x) => {
+          //   debugger;
+          //   $scope.frame = x;
+          // });
+
+          $scope.$watchCollection(
+            () => {
+              console.log('frame is now ' + $scope.$root.frame);
+              return {
+                model: $scope.model,
+                frame: $scope.$root.frame,
+                palette: $scope.$root.palette
+              };
+            },
+            (o) => {
+              const model = o.model;
+              const frame = o.frame;
+              const palette = o.palette;
+
+              if (!model) return;
+              if (!palette) return;
+
+              scene.palette = palette;
+              scene.entities = [
+                {model: model, frame: frame}
+              ];
+
+              renderReactEl(scene);
+            }
+          );
+
+          return;
+
+            // -- old --
+
             var aspect;
-            var zoom = 1/40;
+            // var zoom = 1/40;
             var $canvas = $element.find('canvas');
             $canvas.on('wheel', (evt) => {
                 zoom *= Math.pow(1.1, -evt.originalEvent.deltaY / 10);
                 sizeCanvasToContainer(); // overkill for setting zoom
             })
-            var n = -100;
-            var f = 100;
+            // var n = -100;
+            // var f = 100;
             var projectionMatrix;
-            var camSpaceMatrix = $scope.mv;
-            var scene = {
-                entities: []
-            };
-            var gl = $canvas[0].getContext('webgl');
-            gl.enable(gl.BLEND);
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-            function sizeCanvasToContainer(){
-                var w = $element[0].clientWidth;
-                var h = $element[0].clientHeight;
-                aspect = w/h;
-                $canvas.attr('width', w).attr('height', h);
-                projectionMatrix = [
-                    zoom/aspect, 0, 0, 0,
-                    0, zoom, 0, 0,
-                    0, 0, -2/(f-n), 0,
-                    0, 0, -(f+n)/(f-n), 1.0
-                ];
-                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-                gl.useProgram(vertShaderProgram);
-                var vertProjMatrixU = gl.getUniformLocation(vertShaderProgram, 'projMatrix');
-                gl.uniformMatrix4fv(vertProjMatrixU, false, new Float32Array(projectionMatrix));
-                gl.useProgram(svShaderProgram);
-                var svProjMatrixU = gl.getUniformLocation(svShaderProgram, 'projMatrix');
-                gl.uniformMatrix4fv(svProjMatrixU, false, new Float32Array(projectionMatrix));
-                gl.useProgram(axisShaderProgram);
-                var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
-                gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
-                gl.useProgram(shaderProgram);
-                var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
-                gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
-            }
+            // var camSpaceMatrix = $scope.mv;
+            // var scene = {
+            //     entities: []
+            // };
+            // var gl = $canvas[0].getContext('webgl');
+            // gl.enable(gl.BLEND);
+            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+            // function sizeCanvasToContainer(){
+            //     var w = $element[0].clientWidth;
+            //     var h = $element[0].clientHeight;
+            //     aspect = w/h;
+            //     $canvas.attr('width', w).attr('height', h);
+            //     projectionMatrix = [
+            //         zoom/aspect, 0, 0, 0,
+            //         0, zoom, 0, 0,
+            //         0, 0, -2/(f-n), 0,
+            //         0, 0, -(f+n)/(f-n), 1.0
+            //     ];
+            //     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            //     gl.useProgram(vertShaderProgram);
+            //     var vertProjMatrixU = gl.getUniformLocation(vertShaderProgram, 'projMatrix');
+            //     gl.uniformMatrix4fv(vertProjMatrixU, false, new Float32Array(projectionMatrix));
+            //     gl.useProgram(svShaderProgram);
+            //     var svProjMatrixU = gl.getUniformLocation(svShaderProgram, 'projMatrix');
+            //     gl.uniformMatrix4fv(svProjMatrixU, false, new Float32Array(projectionMatrix));
+            //     gl.useProgram(axisShaderProgram);
+            //     var axisMatrixUniform = gl.getUniformLocation(axisShaderProgram, 'matrix');
+            //     gl.uniformMatrix4fv(axisMatrixUniform, false, new Float32Array(projectionMatrix));
+            //     gl.useProgram(shaderProgram);
+            //     var matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
+            //     gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
+            // }
             function worldToNDC(vert){
                 var vertNDC = [vert.x, vert.y, vert.z, 1];
                 vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
@@ -300,10 +181,10 @@ export default function(){
                 return vertsHitIndeces;
             }
 
-            window.addEventListener('resize', sizeCanvasToContainer);
+            // window.addEventListener('resize', sizeCanvasToContainer);
 
-            var selectedVertIndexBuf = gl.createBuffer();
-            var sweepBoxVertBuf = gl.createBuffer();
+            // var selectedVertIndexBuf = gl.createBuffer();
+            // var sweepBoxVertBuf = gl.createBuffer();
             var movingFrom;
             function ndcToWorld(vNDC){
                 var invProjMat = mat4.create();
@@ -451,102 +332,103 @@ export default function(){
                 $scope.toolState.set('single');
             }
 
-            var sweepShaderProgram = createSweepShaderProgram(gl);
-            gl.useProgram(sweepShaderProgram);
-            var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
-            gl.enableVertexAttribArray(swPosAtt);
+            // var sweepShaderProgram = createSweepShaderProgram(gl);
+            // gl.useProgram(sweepShaderProgram);
+            // var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
+            // gl.enableVertexAttribArray(swPosAtt);
+            //
+            // var svShaderProgram = createSelectedVertShaderProgram(gl);
+            // gl.useProgram(svShaderProgram);
+            // var svPosAtt = gl.getAttribLocation(svShaderProgram, 'aVertPos');
+            // gl.enableVertexAttribArray(svPosAtt);
+            // var svCamSpaceMatrixU = gl.getUniformLocation(svShaderProgram, 'camSpaceMatrix');
+            // gl.uniformMatrix4fv(svCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
+            //
+            // var axesbuf = bufferAxes(gl);
+            // var axisShaderProgram = createAxisShaderProgram(gl);
+            // gl.useProgram(axisShaderProgram);
+            // var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
+            // gl.enableVertexAttribArray(axisvertexposatt);
+            // var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
+            // gl.enableVertexAttribArray(axisvertcoloratt);
+            // var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
+            // gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
+            //
+            // var vertShaderProgram = createVertShaderProgram(gl);
+            // gl.useProgram(vertShaderProgram);
+            // var vertShader_aVertPos = gl.getAttribLocation(vertShaderProgram, 'aVertPos');
+            // gl.enableVertexAttribArray(vertShader_aVertPos);
+            // var vertCamSpaceMatrixU = gl.getUniformLocation(vertShaderProgram, 'camSpaceMatrix');
+            // gl.uniformMatrix4fv(vertCamSpaceMatrixU, false, camSpaceMatrix);
+            // var vertBuf = gl.createBuffer();
+            //
+            // var shaderProgram = createModelShaderProgram(gl);
+            // gl.useProgram(shaderProgram);
+            // var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+            // gl.enableVertexAttribArray(vertexPositionAttribute);
+            // var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
+            // gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
+            // var buf = gl.createBuffer(); // verts for lines in each poly
 
-            var svShaderProgram = createSelectedVertShaderProgram(gl);
-            gl.useProgram(svShaderProgram);
-            var svPosAtt = gl.getAttribLocation(svShaderProgram, 'aVertPos');
-            gl.enableVertexAttribArray(svPosAtt);
-            var svCamSpaceMatrixU = gl.getUniformLocation(svShaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(svCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
+            // function render(){
+            //     gl.clearColor(0, 0, 0, 0);
+            //     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            //     gl.useProgram(shaderProgram);
+            //
+            //     var vertices = [];
+            //     for (var ent of scene.entities) {
+            //         var mdl = ent.model;
+            //         var frameverts = mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
+            //         for (var vert of frameverts) {
+            //             vertices.push(vert.x, vert.y, vert.z);
+            //         }
+            //         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+            //         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+            //         gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+            //         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
+            //         gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
+            //     }
+            //
+            //     var verts = [];
+            //     gl.useProgram(vertShaderProgram);
+            //     for (var ent of scene.entities) {
+            //         var mdl = ent.model;
+            //         for (var vert of mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts) {
+            //             verts.push(vert.x, vert.y, vert.z);
+            //         }
+            //         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+            //         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+            //         gl.vertexAttribPointer(vertShader_aVertPos, 3, gl.FLOAT, false, 0, 0);
+            //         gl.drawArrays(gl.POINTS, 0, vertices.length / 3);
+            //     }
+            //
+            //     drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
+            //         svPosAtt, $scope.selectedVerts.length);
+            //     drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
+            //     if ($scope.toolState.get() == 'sweep.sweeping')
+            //         drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
+            //     window.requestAnimationFrame(render);
+            // }
+            // window.requestAnimationFrame(render);
 
-            var axesbuf = bufferAxes(gl);
-            var axisShaderProgram = createAxisShaderProgram(gl);
-            gl.useProgram(axisShaderProgram);
-            var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
-            gl.enableVertexAttribArray(axisvertexposatt);
-            var axisvertcoloratt = gl.getAttribLocation(axisShaderProgram, 'aVertexColor');
-            gl.enableVertexAttribArray(axisvertcoloratt);
-            var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
+            // sizeCanvasToContainer(); DONE
 
-            var vertShaderProgram = createVertShaderProgram(gl);
-            gl.useProgram(vertShaderProgram);
-            var vertShader_aVertPos = gl.getAttribLocation(vertShaderProgram, 'aVertPos');
-            gl.enableVertexAttribArray(vertShader_aVertPos);
-            var vertCamSpaceMatrixU = gl.getUniformLocation(vertShaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(vertCamSpaceMatrixU, false, camSpaceMatrix);
-            var vertBuf = gl.createBuffer();
+            // var vertIndexBuffer = gl.createBuffer();
 
-            var shaderProgram = createModelShaderProgram(gl);
-            gl.useProgram(shaderProgram);
-            var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-            gl.enableVertexAttribArray(vertexPositionAttribute);
-            var camSpaceMatrixU = gl.getUniformLocation(shaderProgram, 'camSpaceMatrix');
-            gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
-            var buf = gl.createBuffer(); // verts for lines in each poly
-
-            function render(){
-                gl.clearColor(0, 0, 0, 0);
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                gl.useProgram(shaderProgram);
-
-                var vertices = [];
-                for (var ent of scene.entities) {
-                    var mdl = ent.model;
-                    var frameverts = mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts;
-                    for (var vert of frameverts) {
-                        vertices.push(vert.x, vert.y, vert.z);
-                    }
-                    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-                    gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
-                    gl.drawElements(gl.LINES, mdl.triangles.length * 3 * 2, gl.UNSIGNED_SHORT, 0);
-                }
-
-                var verts = [];
-                gl.useProgram(vertShaderProgram);
-                for (var ent of scene.entities) {
-                    var mdl = ent.model;
-                    for (var vert of mdl.frames[Math.floor($scope.$root.frame)].simpleFrame.verts) {
-                        verts.push(vert.x, vert.y, vert.z);
-                    }
-                    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
-                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
-                    gl.vertexAttribPointer(vertShader_aVertPos, 3, gl.FLOAT, false, 0, 0);
-                    gl.drawArrays(gl.POINTS, 0, vertices.length / 3);
-                }
-
-                drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
-                    svPosAtt, $scope.selectedVerts.length);
-                drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
-                if ($scope.toolState.get() == 'sweep.sweeping')
-                    drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
-                window.requestAnimationFrame(render);
-            }
-            window.requestAnimationFrame(render);
-
-            sizeCanvasToContainer();
-
-            var vertIndexBuffer = gl.createBuffer();
-            $scope.$watch('model', (newval) => {
-                if (!newval) return;
-                scene.entities = [{model: newval}];
-            });
-            $scope.$watchCollection('model.triangles', (tris) => {
-                var vertIndeces = [];
-                for (var tri of tris || []) {
-                    vertIndeces.push(tri.vertIndeces[0], tri.vertIndeces[1],
-                        tri.vertIndeces[1], tri.vertIndeces[2],
-                        tri.vertIndeces[2], tri.vertIndeces[0]);
-                }
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
-                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
-            });
+            // $scope.$watch('model', (newval) => {
+            //     if (!newval) return;
+            //     scene.entities = [{model: newval}];
+            // });
+            // $scope.$watchCollection('model.triangles', (tris) => {
+            //     var vertIndeces = [];
+            //     for (var tri of tris || []) {
+            //         vertIndeces.push(tri.vertIndeces[0], tri.vertIndeces[1],
+            //             tri.vertIndeces[1], tri.vertIndeces[2],
+            //             tri.vertIndeces[2], tri.vertIndeces[0]);
+            //     }
+            //     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
+            //     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertIndeces), gl.STATIC_DRAW);
+            // });
             $scope.$watchCollection('selectedVerts', (newval) => {
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, selectedVertIndexBuf);
                 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(newval), gl.STATIC_DRAW);
