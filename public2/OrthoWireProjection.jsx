@@ -425,9 +425,9 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         const h = canvas.height;
         const projectionMatrix = buildProjectionMatrix(w, h, zoom);
         const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
-        // TODO: scene ref was given to this component by parent. instead of manipulating scene directly, we should emit event and allow something up top to set it.
-        // but for now...
-        scene.selectedVerts = [closestVertIndex];
+        // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, we should emit event and allow something up top to set it.
+        // but for now, edit in place:
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
         break;
       default:
         console.warn(`onMouseMove when toolState=${_toolState} is not yet implemented`);
