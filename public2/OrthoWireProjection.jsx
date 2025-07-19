@@ -185,14 +185,13 @@ function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt){
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
 }
 
-function sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram) {
+function sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram) {
   const container = canvas.parentElement;
   const w = container.clientWidth;
   const h = container.clientHeight;
   const aspect = w/h;
   const n = -100;
   const f = 100;
-  const zoom = 1/40;
   const projectionMatrix = [
       zoom/aspect, 0, 0, 0,
       0, zoom, 0, 0,
@@ -227,11 +226,17 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
 
   const canvasRef = useRef(null);
   const camSpaceMatrix = mv;
+  var zoom = 1/40;
+  var gl;
+  var vertShaderProgram;
+  var svShaderProgram;
+  var axisShaderProgram;
+  var shaderProgram;
 
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
       const canvas = canvasRef.current;
-      const gl = canvas.getContext('webgl');
+      gl = canvas.getContext('webgl');
 
       // create shader programs
 
@@ -240,7 +245,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
       var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(swPosAtt);
 
-      var svShaderProgram = createSelectedVertShaderProgram(gl);
+      svShaderProgram = createSelectedVertShaderProgram(gl);
       gl.useProgram(svShaderProgram);
       var svPosAtt = gl.getAttribLocation(svShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(svPosAtt);
@@ -248,7 +253,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
       gl.uniformMatrix4fv(svCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
 
       var axesbuf = bufferAxes(gl);
-      var axisShaderProgram = createAxisShaderProgram(gl);
+      axisShaderProgram = createAxisShaderProgram(gl);
       gl.useProgram(axisShaderProgram);
       var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
       gl.enableVertexAttribArray(axisvertexposatt);
@@ -257,7 +262,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
       var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
       gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
-      var vertShaderProgram = createVertShaderProgram(gl);
+      vertShaderProgram = createVertShaderProgram(gl);
       gl.useProgram(vertShaderProgram);
       var vertShader_aVertPos = gl.getAttribLocation(vertShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(vertShader_aVertPos);
@@ -265,7 +270,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
       gl.uniformMatrix4fv(vertCamSpaceMatrixU, false, camSpaceMatrix);
       var vertBuf = gl.createBuffer();
 
-      var shaderProgram = createModelShaderProgram(gl);
+      shaderProgram = createModelShaderProgram(gl);
       gl.useProgram(shaderProgram);
       var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
       gl.enableVertexAttribArray(vertexPositionAttribute);
@@ -277,10 +282,10 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
       var selectedVertIndexBuf = gl.createBuffer();
       var sweepBoxVertBuf = gl.createBuffer();
 
-      sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
+      sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
 
       window.addEventListener('resize', () =>
-        sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram)
+        sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram)
       );
 
       gl.enable(gl.BLEND);
@@ -364,6 +369,16 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     console.warn("onMouseMove not yet implemented");
   }
 
+  function onWheel(evt) {
+    console.warn("onWheel entered");
+
+    const canvas = canvasRef.current;
+
+    zoom *= Math.pow(1.1, -evt.nativeEvent.deltaY / 10);
+    // this is overkill. all we want is to compute and set the projection matrix, but that's inlined in this fn for now, so:
+    sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
+  }
+
   return (
     <canvas
         ref={canvasRef}
@@ -371,6 +386,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseLeave}
         onMouseMove={onMouseMove}
+        onWheel={onWheel}
     ></canvas>
   )
 }

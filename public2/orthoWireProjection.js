@@ -84,16 +84,16 @@ export default function(){
 
             // -- old --
 
-            var aspect;
+            // var aspect;
             // var zoom = 1/40;
-            var $canvas = $element.find('canvas');
-            $canvas.on('wheel', (evt) => {
-                zoom *= Math.pow(1.1, -evt.originalEvent.deltaY / 10);
-                sizeCanvasToContainer(); // overkill for setting zoom
-            })
+            // var $canvas = $element.find('canvas');
+            // $canvas.on('wheel', (evt) => {
+            //     zoom *= Math.pow(1.1, -evt.originalEvent.deltaY / 10);
+            //     sizeCanvasToContainer(); // overkill for setting zoom
+            // })
             // var n = -100;
             // var f = 100;
-            var projectionMatrix;
+            // var projectionMatrix;
             // var camSpaceMatrix = $scope.mv;
             // var scene = {
             //     entities: []
