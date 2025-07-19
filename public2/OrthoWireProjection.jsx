@@ -279,6 +279,10 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
 
       sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
 
+      window.addEventListener('resize', () =>
+        sizeCanvasToContainer(canvas, gl, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram)
+      );
+
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
