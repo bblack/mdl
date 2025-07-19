@@ -186,17 +186,17 @@ export default function(){
             // var selectedVertIndexBuf = gl.createBuffer();
             // var sweepBoxVertBuf = gl.createBuffer();
             var movingFrom;
-            function ndcToWorld(vNDC){
-                var invProjMat = mat4.create();
-                mat4.invert(invProjMat, projectionMatrix);
-                var vCam = vec4.create();
-                vec4.transformMat4(vCam, vNDC, invProjMat);
-                var invCamSpaceMat = mat4.create();
-                mat4.invert(invCamSpaceMat, camSpaceMatrix);
-                var vWorld = vec4.create();
-                vec4.transformMat4(vWorld, vCam, invCamSpaceMat);
-                return vWorld;
-            }
+            // function ndcToWorld(vNDC){
+            //     var invProjMat = mat4.create();
+            //     mat4.invert(invProjMat, projectionMatrix);
+            //     var vCam = vec4.create();
+            //     vec4.transformMat4(vCam, vNDC, invProjMat);
+            //     var invCamSpaceMat = mat4.create();
+            //     mat4.invert(invCamSpaceMat, camSpaceMatrix);
+            //     var vWorld = vec4.create();
+            //     vec4.transformMat4(vWorld, vCam, invCamSpaceMat);
+            //     return vWorld;
+            // }
             function moveSelectedVerts(fromScr, toScr){
                 var w = $canvas[0].clientWidth;
                 var h = $canvas[0].clientHeight;
@@ -283,13 +283,13 @@ export default function(){
                 newtri = null;
                 $scope.toolState.set('addtri');
             }
-            $scope.onCanvasMousedown['addvert'] = (evt) => {
-                var xNDC = evt.offsetX / $canvas[0].clientWidth * 2 - 1;
-                var yNDC = evt.offsetY / $canvas[0].clientHeight * -2 + 1;
-                var vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
-                var vWorld = ndcToWorld(vNDC);
-                $scope.model.addVert(vWorld[0], vWorld[1], vWorld[2]);
-            }
+            // $scope.onCanvasMousedown['addvert'] = (evt) => {
+            //     var xNDC = evt.offsetX / $canvas[0].clientWidth * 2 - 1;
+            //     var yNDC = evt.offsetY / $canvas[0].clientHeight * -2 + 1;
+            //     var vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
+            //     var vWorld = ndcToWorld(vNDC);
+            //     $scope.model.addVert(vWorld[0], vWorld[1], vWorld[2]);
+            // }
             $scope.onCanvasMousedown['move'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];
                 $scope.toolState.set('move.moving');

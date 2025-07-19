@@ -32,11 +32,6 @@ export default function(){
             reactRoot.render(reactEl);
           }
 
-          // $scope.$watch('frame', (x) => {
-          //   debugger;
-          //   $scope.frame = x;
-          // });
-
           $scope.$watchCollection(
             () => {
               console.log('frame is now ' + $scope.$root.frame);

@@ -220,6 +220,18 @@ function setProjectionMatrixUniforms(projectionMatrix, gl, vertShaderProgram, sv
   gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
 }
 
+function ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix){
+    var invProjMat = mat4.create();
+    mat4.invert(invProjMat, projectionMatrix);
+    var vCam = vec4.create();
+    vec4.transformMat4(vCam, vNDC, invProjMat);
+    var invCamSpaceMat = mat4.create();
+    mat4.invert(invCamSpaceMat, camSpaceMatrix);
+    var vWorld = vec4.create();
+    vec4.transformMat4(vWorld, vCam, invCamSpaceMat);
+    return vWorld;
+}
+
 function buildProjectionMatrix(w, h, zoom) {
   const aspect = w/h;
   const n = -100;
@@ -401,8 +413,25 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
 
   }, [true]); // dependency on constant "true" so useEffect runs only on first render
 
-  function onMouseDown() {
-    // console.warn("onMouseDown not yet implemented");
+  function onMouseDown(evt) {
+    const canvas = canvasRef.current;
+    const _toolState = toolState.get();
+    const x = evt.nativeEvent.offsetX;
+    const y = evt.nativeEvent.offsetY;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    switch (_toolState) {
+      case 'addvert':
+        var xNDC = x / canvas.clientWidth * 2 - 1;
+        var yNDC = y / canvas.clientHeight * -2 + 1;
+        var vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        var vWorld = ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
+        scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
+      default:
+        console.warn(`onMouseDown when toolState=${_toolState} is not yet implemented`);
+    }
   }
 
   function onMouseUp() {
@@ -416,13 +445,13 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
   function onMouseMove(evt) {
     const canvas = canvasRef.current;
     const _toolState = toolState.get();
+    const x = evt.nativeEvent.offsetX;
+    const y = evt.nativeEvent.offsetY;
+    const w = canvas.width;
+    const h = canvas.height;
 
     switch (_toolState) {
       case 'single':
-        const x = evt.nativeEvent.offsetX;
-        const y = evt.nativeEvent.offsetY;
-        const w = canvas.width;
-        const h = canvas.height;
         const projectionMatrix = buildProjectionMatrix(w, h, zoom);
         const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
         // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, we should emit event and allow something up top to set it.
