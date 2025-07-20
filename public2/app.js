@@ -20,8 +20,6 @@
 
 import './components/angular/angular.min.js';
 import './components/buffer/buffer.js';
-import orthoWireProjection from './orthoWireProjection.js';
-import perspectiveProjection from './perspectiveProjection.js';
 import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import PerspectiveProjection from './PerspectiveProjection.jsx';
@@ -351,7 +349,7 @@ angular.module('mdlr', [])
       $scope.$emit('save');
     }
 })
-.controller('QuadViewController', function($scope, $rootScope, $http){
+.controller('QuadViewController', function($scope, $rootScope, $http, $element){
     $scope.selectedVerts = [];
 
     $http.get('palette.lmp', {responseType: 'arraybuffer'})
@@ -367,8 +365,79 @@ angular.module('mdlr', [])
       .then(function(res){
           var buf = new buffer.Buffer(new Uint8Array(res.data));
           $scope.$emit('modelbuffer', buf);
-      })
-      .catch(e => { console.error('shit'); });
+      });
+
+      const scene = {
+        selectedVerts: $scope.selectedVerts,
+        entities: []
+      };
+
+      const reactRoot = createRoot($element[0]);
+
+      $scope.$watch('frame', (newVal) =>
+        scene.entities.forEach(ent => ent.frame = newVal)
+      );
+
+      $scope.$watch('palette', (newVal) => scene.palette = newVal);
+
+      $scope.$watch('model', (model) => {
+        scene.entities = [
+          {model: model, frame: $scope.frame}
+        ];
+
+        const renderReactEl = ({ mv, scene, toolState }) => {
+          console.log('rendering react element')
+
+          const paneNW = React.createElement(
+            "div",
+            {className: 'pane n w',},
+            React.createElement(
+              OrthoWireProjection,
+              {mv: [1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1], scene: scene, toolState: toolState},
+              "" // contents/children
+            )
+          );
+          const paneNE = React.createElement(
+            "div",
+            {className: 'pane n e',},
+            React.createElement(
+              OrthoWireProjection,
+              {mv: [0,0,1,0,  1,0,0,0,  0,1,0,0,  0,0,40,1], scene: scene, toolState: toolState},
+              "" // contents/children
+            )
+          );
+          const paneSW = React.createElement(
+            "div",
+            {className: 'pane s w',},
+            React.createElement(
+              OrthoWireProjection,
+              {mv: [0,1,0,0,  -1,0,0,0,  0,0,1,0,  0,0,40,1], scene: scene, toolState: toolState},
+              "" // contents/children
+            )
+          );
+          const paneSE = React.createElement(
+            "div",
+            {className: 'pane s e',},
+            React.createElement(
+              PerspectiveProjection,
+              {mv: [1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1], scene: scene, toolState: toolState},
+              "" // contents/children
+            )
+          );
+          const reactEl = React.createElement(
+            "div",
+            null,
+            [paneNW, paneNE, paneSW, paneSE]
+          )
+
+          reactRoot.render(reactEl);
+        }
+
+        renderReactEl({
+          scene: scene,
+          toolState: $scope.toolState
+        });
+      });
 })
 .service('MdlNorms', function($http){
     var norms = []
@@ -390,8 +459,6 @@ angular.module('mdlr', [])
 
     return norms;
 })
-.directive('orthoWireProjection', orthoWireProjection)
-.directive('perspectiveProjection', perspectiveProjection)
 .run(($rootScope, Mdl) => {
   console.log('running!');
     $rootScope.toolState = {

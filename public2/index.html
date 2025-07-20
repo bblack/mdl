@@ -21,6 +21,10 @@
                 font-weight: 300;
             }
 
+            canvas {
+              /* background-color: hsla(0, 0%, 0%, 10%); */
+            }
+
             .pane {
                 position: absolute;
                 width: 50%;
@@ -134,24 +138,6 @@
             <hr/>
 
         </div><div id='quadview' ng-controller='QuadViewController'>
-            <ortho-wire-projection class='pane n w' model='model' frame='frame'
-                selected-verts='selectedVerts'
-                tool-state='toolState'
-                mv='[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]'>
-            </ortho-wire-projection>
-            <ortho-wire-projection class='pane n e' model='model' frame='frame'
-                selected-verts='selectedVerts'
-                tool-state='toolState'
-                mv='[0,0,1,0,  1,0,0,0,  0,1,0,0,  0,0,40,1]'>
-            </ortho-wire-projection>
-            <ortho-wire-projection class='pane s w' model='model' frame='frame'
-                selected-verts='selectedVerts'
-                tool-state='toolState'
-                mv='[0,1,0,0,  -1,0,0,0,  0,0,1,0,  0,0,40,1]'>
-            </ortho-wire-projection>
-            <perspective-projection class='pane s e' model='model' frame='frame'
-                mv='[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]'>
-            </perspective-projection>
         </div>
         <!-- new shit here: -->
         <!-- <div id="root"></div>
