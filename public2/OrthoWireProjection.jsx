@@ -300,6 +300,7 @@ function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix
     });
 }
 
+// TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
 export default function OrthoWireProjection({mv, scene, toolState}) {
   console.log('OrthoWireProjection entered');
 
@@ -313,6 +314,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
   var shaderProgram;
 
   var movingFrom;
+  var newtri;
 
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
@@ -443,6 +445,23 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     const h = canvas.height;
 
     switch (_toolState) {
+      case 'addtri':
+        newtri = {
+          facesFront: 0,
+          vertIndeces: [scene.selectedVerts[0]]
+        };
+        toolState.set('addtri.vert2');
+        break;
+      case 'addtri.vert2':
+        newtri.vertIndeces.push(scene.selectedVerts[0]);
+        toolState.set('addtri.vert3');
+        break;
+      case 'addtri.vert3':
+        newtri.vertIndeces.push(scene.selectedVerts[0]);
+        scene.entities[0].model.triangles.push(newtri);
+        newtri = null;
+        toolState.set('addtri');
+        break;
       case 'addvert':
         var xNDC = x / canvas.clientWidth * 2 - 1;
         var yNDC = y / canvas.clientHeight * -2 + 1;
@@ -478,7 +497,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     }
   }
 
-  function onMouseLeave() {
+  function onMouseLeave(evt) {
     const canvas = canvasRef.current;
     const _toolState = toolState.get();
     const x = evt.nativeEvent.offsetX;
@@ -504,13 +523,19 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     const w = canvas.width;
     const h = canvas.height;
     var projectionMatrix = null;
+    var closestVertIndex = null;
 
     switch (_toolState) {
+      case 'addtri':
+      case 'addtri.vert2':
+      case 'addtri.vert3':
+        projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
+        break;
       case 'single':
         projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
-        // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, we should emit event and allow something up top to set it.
-        // but for now, edit in place:
+        closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
         scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
         break;
       case 'single.moving':

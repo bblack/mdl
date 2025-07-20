@@ -260,29 +260,29 @@ export default function(){
             //     var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
             //     return fn && fn(evt);
             // }
-            var newtri;
-            ['addtri', 'addtri.vert2', 'addtri.vert3'].forEach((ts) => {
-                $scope.onCanvasMousemove[ts] = (evt) => {
-                    var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
-                    $scope.selectedVerts.length = 0;
-                    $scope.selectedVerts.push(closestVertIndex);
-                }
-            })
-            $scope.onCanvasMousedown['addtri'] = (evt) => {
-                newtri = {facesFront: 0, vertIndeces: []};
-                newtri.vertIndeces.push($scope.selectedVerts[0]);
-                $scope.toolState.set('addtri.vert2')
-            }
-            $scope.onCanvasMousedown['addtri.vert2'] = (evt) => {
-                newtri.vertIndeces.push($scope.selectedVerts[0]);
-                $scope.toolState.set('addtri.vert3')
-            }
-            $scope.onCanvasMousedown['addtri.vert3'] = (evt) => {
-                newtri.vertIndeces.push($scope.selectedVerts[0]);
-                $scope.model.triangles.push(newtri);
-                newtri = null;
-                $scope.toolState.set('addtri');
-            }
+            // var newtri;
+            // ['addtri', 'addtri.vert2', 'addtri.vert3'].forEach((ts) => {
+            //     $scope.onCanvasMousemove[ts] = (evt) => {
+            //         var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+            //         $scope.selectedVerts.length = 0;
+            //         $scope.selectedVerts.push(closestVertIndex);
+            //     }
+            // })
+            // $scope.onCanvasMousedown['addtri'] = (evt) => {
+            //     newtri = {facesFront: 0, vertIndeces: []};
+            //     newtri.vertIndeces.push($scope.selectedVerts[0]);
+            //     $scope.toolState.set('addtri.vert2')
+            // }
+            // $scope.onCanvasMousedown['addtri.vert2'] = (evt) => {
+            //     newtri.vertIndeces.push($scope.selectedVerts[0]);
+            //     $scope.toolState.set('addtri.vert3')
+            // }
+            // $scope.onCanvasMousedown['addtri.vert3'] = (evt) => {
+            //     newtri.vertIndeces.push($scope.selectedVerts[0]);
+            //     $scope.model.triangles.push(newtri);
+            //     newtri = null;
+            //     $scope.toolState.set('addtri');
+            // }
             // $scope.onCanvasMousedown['addvert'] = (evt) => {
             //     var xNDC = evt.offsetX / $canvas[0].clientWidth * 2 - 1;
             //     var yNDC = evt.offsetY / $canvas[0].clientHeight * -2 + 1;

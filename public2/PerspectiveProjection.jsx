@@ -260,6 +260,8 @@ export default function PerspectiveProjection({mv, scene}) {
             gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, texcoordsbuf);
+            bufferTexCoords(gl, texcoordsbuf, model.triangles,
+                model.texCoords, model.skinWidth, model.skinHeight);
             gl.vertexAttribPointer(vertexTexCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 
             gl.drawArrays(gl.TRIANGLES, 0, mdl.triangles.length * 3);
@@ -279,9 +281,6 @@ export default function PerspectiveProjection({mv, scene}) {
         pixels.set(rgb, pixnum * 4);
     });
     loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
-
-    bufferTexCoords(gl, texcoordsbuf, model.triangles,
-        model.texCoords, model.skinWidth, model.skinHeight);
 
     render();
   }, [true]); // dependency on constant "true" so useEffect runs only on first render
