@@ -22,6 +22,11 @@ import './components/angular/angular.min.js';
 import './components/buffer/buffer.js';
 import orthoWireProjection from './orthoWireProjection.js';
 import perspectiveProjection from './perspectiveProjection.js';
+import React, { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import PerspectiveProjection from './PerspectiveProjection.jsx';
+import OrthoWireProjection from './OrthoWireProjection.jsx';
+import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
 
 angular.module('mdlr', [])
 .factory('Mdl', function(){
@@ -350,24 +355,20 @@ angular.module('mdlr', [])
     $scope.selectedVerts = [];
 
     $http.get('palette.lmp', {responseType: 'arraybuffer'})
-    .then(function(res){
-        const parsePalette = function(buf) {
-          var array = new Uint8Array(buf);
-          var out = [];
-          for (var i=0; i<256; i++) {
-            out.push([array[i*3], array[i*3 + 1], array[i*3 + 2]]); // rgb
+      .then(function(res){
+          const parsePalette = function(buf) {
+            var bytes = new Uint8Array(buf);
+            return new Array(256).fill(null)
+              .map((e, i) => [bytes[i*3], bytes[i*3 + 1], bytes[i*3 + 2]]);
           }
-          return out;
-        }
-        $rootScope.palette = parsePalette(res.data);
-
-        return $http.get('/player.mdl', {responseType: 'arraybuffer'})
-        .then(function(res){
-            var buf = new buffer.Buffer(new Uint8Array(res.data));
-            $scope.$emit('modelbuffer', buf);
-        })
-        .catch(e => { console.error('shit'); });
-    });
+          $rootScope.palette = parsePalette(res.data);
+      })
+      .then(() => $http.get('/player.mdl', {responseType: 'arraybuffer'}))
+      .then(function(res){
+          var buf = new buffer.Buffer(new Uint8Array(res.data));
+          $scope.$emit('modelbuffer', buf);
+      })
+      .catch(e => { console.error('shit'); });
 })
 .service('MdlNorms', function($http){
     var norms = []
