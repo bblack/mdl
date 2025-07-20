@@ -180,10 +180,16 @@ function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, selectedVerts){
     gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
     gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
 }
-function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt){
+function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts){
+    if (!sweepBoxVerts || sweepBoxVerts.length == 0) return;
+
     gl.useProgram(sweepShaderProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, sweepBoxVertBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, sweepBoxVerts, gl.STATIC_DRAW);
     gl.vertexAttribPointer(swPosAtt, 3, gl.FLOAT, false, 0, 0);
+
+    // i don't know why, but even though the box appears, this regularly causes "GL_INVALID_OPERATION: glDrawArrays: Vertex buffer is not big enough for the draw call."
+    // the box is laggy wrt user input. is every other draw failing for some reason?
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
 }
 
@@ -270,17 +276,6 @@ function getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix) {
     return closestVertIndex;
 }
 
-function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
-    var vertNDC = [vert.x, vert.y, vert.z, 1];
-    vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
-    vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
-    return [
-        vertNDC[0] / vertNDC[3],
-        vertNDC[1] / vertNDC[3],
-        vertNDC[2] / vertNDC[3]
-    ];
-}
-
 function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr) {
     var w = canvas.clientWidth;
     var h = canvas.clientHeight;
@@ -300,6 +295,42 @@ function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix
     });
 }
 
+function getVertsIn(x1, y1, x2, y2, w, h, camSpaceMatrix, projectionMatrix, scene) {
+    var x1ndc = x1 / w * 2 - 1;
+    var y1ndc = y1 / h * -2 + 1;
+    var x2ndc = x2 / w * 2 - 1;
+    var y2ndc = y2 / h * -2 + 1;
+    var xlondc = Math.min(x1ndc, x2ndc);
+    var xhindc = Math.max(x1ndc, x2ndc);
+    var ylondc = Math.min(y1ndc, y2ndc);
+    var yhindc = Math.max(y1ndc, y2ndc);
+    var vertsHitIndeces = [];
+    for (var ent of scene.entities) {
+        var verts = ent.model.frames[Math.floor(ent.frame)].simpleFrame.verts;
+        for (var i=0; i<verts.length; i++) {
+            var vertNDC = worldToNDC(verts[i], camSpaceMatrix, projectionMatrix);
+
+            if (vertNDC[0] > xlondc && vertNDC[0] < xhindc
+                && vertNDC[1] > ylondc && vertNDC[1] < yhindc) {
+                vertsHitIndeces.push(i);
+            }
+        }
+    }
+
+    return vertsHitIndeces;
+}
+
+function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
+    var vertNDC = [vert.x, vert.y, vert.z, 1];
+    vec4.transformMat4(vertNDC, vertNDC, camSpaceMatrix);
+    vec4.transformMat4(vertNDC, vertNDC, projectionMatrix);
+    return [
+        vertNDC[0] / vertNDC[3],
+        vertNDC[1] / vertNDC[3],
+        vertNDC[2] / vertNDC[3]
+    ];
+}
+
 // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
 export default function OrthoWireProjection({mv, scene, toolState}) {
   console.log('OrthoWireProjection entered');
@@ -307,14 +338,18 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
   const canvasRef = useRef(null);
   const camSpaceMatrix = mv;
   var zoom = 1/40;
+
   var gl;
   var vertShaderProgram;
   var svShaderProgram;
   var axisShaderProgram;
   var shaderProgram;
+  var sweepShaderProgram;
+  var sweepBoxVertBuf;
 
   var movingFrom;
   var newtri;
+  var sweepBoxVerts;
 
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
@@ -323,7 +358,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
 
       // create shader programs
 
-      var sweepShaderProgram = createSweepShaderProgram(gl);
+      sweepShaderProgram = createSweepShaderProgram(gl);
       gl.useProgram(sweepShaderProgram);
       var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(swPosAtt);
@@ -363,7 +398,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
       var buf = gl.createBuffer(); // verts for lines in each poly
       var vertIndexBuffer = gl.createBuffer();
       var selectedVertIndexBuf = gl.createBuffer();
-      var sweepBoxVertBuf = gl.createBuffer();
+      sweepBoxVertBuf = gl.createBuffer();
 
       sizeCanvasToContainer(canvas, gl, zoom, vertShaderProgram, svShaderProgram, axisShaderProgram, shaderProgram);
 
@@ -426,8 +461,10 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
           drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
               svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
-          if (toolState.get() == 'sweep.sweeping')
-              drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt);
+
+          if (toolState.get() == 'sweep.sweeping') {
+            drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts);
+          }
 
           window.requestAnimationFrame(render);
       }
@@ -474,8 +511,13 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         movingFrom = [x, y];
         toolState.set('single.moving');
         break;
+      case 'sweep':
+        movingFrom = [x, y];
+        sweepBoxVerts = null;
+        toolState.set('sweep.sweeping');
+        break;
       default:
-        console.warn(`onMouseDown when toolState=${_toolState} is not yet implemented`);
+        // console.warn(`onMouseDown when toolState=${_toolState} is not yet implemented`);
     }
   }
 
@@ -492,8 +534,12 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         movingFrom = null;
         toolState.set('single');
         break;
+      case 'sweep.sweeping':
+        movingFrom = null;
+        toolState.set('sweep');
+        break;
       default:
-        console.warn(`onMouseUp when toolState=${_toolState} is not yet implemented`);
+        // console.warn(`onMouseUp when toolState=${_toolState} is not yet implemented`);
     }
   }
 
@@ -511,7 +557,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         toolState.set('single');
         break;
       default:
-        console.warn(`onMouseLeave when toolState=${_toolState} is not yet implemented`);
+        // console.warn(`onMouseLeave when toolState=${_toolState} is not yet implemented`);
     }
   }
 
@@ -524,6 +570,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     const h = canvas.height;
     var projectionMatrix = null;
     var closestVertIndex = null;
+    var selectedVerts = null;
 
     switch (_toolState) {
       case 'addtri':
@@ -542,19 +589,41 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         const fromScr = movingFrom;
         const toScr = [x, y];
         const model = scene.entities[0].model;
-        const selectedVerts = scene.selectedVerts;
+        selectedVerts = scene.selectedVerts;
         const frame = Math.floor(scene.entities[0].frame);
         projectionMatrix = buildProjectionMatrix(w, h, zoom);
         moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
         movingFrom = [x, y];
+      case 'sweep.sweeping':
+        projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,
+          w, h, camSpaceMatrix, projectionMatrix, scene);
+
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, ...selectedVerts);
+
+        console.log(`between (${movingFrom[0]}, ${movingFrom[1]}) and (${x}, ${y}), selected ${scene.selectedVerts.length} verts`)
+
+        var fromNDC = [
+            movingFrom[0] / w * 2 - 1,
+            movingFrom[1] / h * -2 + 1
+        ];
+        var toNDC = [
+            x / w * 2 - 1,
+            y / h * -2 + 1
+        ];
+
+        sweepBoxVerts = new Float32Array([
+            fromNDC[0], fromNDC[1], 0, // x, y, z NDC
+            fromNDC[0], toNDC[1], 0,
+            toNDC[0], toNDC[1], 0,
+            toNDC[0], fromNDC[1], 0
+        ]);
       default:
-        console.warn(`onMouseMove when toolState=${_toolState} is not yet implemented`);
+        // console.warn(`onMouseMove when toolState=${_toolState} is not yet implemented`);
     }
   }
 
   function onWheel(evt) {
-    console.warn("onWheel entered");
-
     const canvas = canvasRef.current;
 
     zoom *= Math.pow(1.1, -evt.nativeEvent.deltaY / 10);
