@@ -317,6 +317,9 @@ angular.module('mdlr', [])
     lastTickTime = newTickTime;
     $scope.frame = ($scope.frame + lerp) % $scope.model.frames.length;
 
+    // WARNING! the above is interfered with by the template which has an <input ng-model='$root.frame'>.
+    // even not touching that input at all, it will continually set $root.frame back to 0 on every digest.
+
     requestAnimationFrame(lerpFrame);
   }
 })

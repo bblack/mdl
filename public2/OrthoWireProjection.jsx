@@ -281,6 +281,25 @@ function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
     ];
 }
 
+function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr) {
+    var w = canvas.clientWidth;
+    var h = canvas.clientHeight;
+    var fromNDC = [fromScr[0]/w*2-1, fromScr[1]/h*-2+1, 0, 1];
+    var toNDC = [toScr[0]/w*2-1, toScr[1]/h*-2+1, 0, 1];
+    var fromObj = ndcToWorld(fromNDC, projectionMatrix, camSpaceMatrix);
+    var toObj = ndcToWorld(toNDC, projectionMatrix, camSpaceMatrix);
+    var delta = vec4.create();
+    vec4.subtract(delta, toObj, fromObj);
+
+    selectedVerts.forEach((vertIndex) => {
+        // var vert = $scope.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts[vertIndex];
+        var vert = model.frames[frame].simpleFrame.verts[vertIndex];
+        vert.x += delta[0];
+        vert.y += delta[1];
+        vert.z += delta[2];
+    });
+}
+
 export default function OrthoWireProjection({mv, scene, toolState}) {
   console.log('OrthoWireProjection entered');
 
@@ -292,6 +311,8 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
   var svShaderProgram;
   var axisShaderProgram;
   var shaderProgram;
+
+  var movingFrom;
 
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
@@ -429,17 +450,50 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         const projectionMatrix = buildProjectionMatrix(w, h, zoom);
         var vWorld = ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
+        break;
+      case 'single':
+        movingFrom = [x, y];
+        toolState.set('single.moving');
+        break;
       default:
         console.warn(`onMouseDown when toolState=${_toolState} is not yet implemented`);
     }
   }
 
-  function onMouseUp() {
-    // console.warn("onMouseUp not yet implemented");
+  function onMouseUp(evt) {
+    const canvas = canvasRef.current;
+    const _toolState = toolState.get();
+    const x = evt.nativeEvent.offsetX;
+    const y = evt.nativeEvent.offsetY;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    switch (_toolState) {
+      case 'single.moving':
+        movingFrom = null;
+        toolState.set('single');
+        break;
+      default:
+        console.warn(`onMouseUp when toolState=${_toolState} is not yet implemented`);
+    }
   }
 
   function onMouseLeave() {
-    // console.warn("onMouseLeave not yet implemented");
+    const canvas = canvasRef.current;
+    const _toolState = toolState.get();
+    const x = evt.nativeEvent.offsetX;
+    const y = evt.nativeEvent.offsetY;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    switch (_toolState) {
+      case 'single.moving':
+        movingFrom = null;
+        toolState.set('single');
+        break;
+      default:
+        console.warn(`onMouseLeave when toolState=${_toolState} is not yet implemented`);
+    }
   }
 
   function onMouseMove(evt) {
@@ -449,15 +503,25 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     const y = evt.nativeEvent.offsetY;
     const w = canvas.width;
     const h = canvas.height;
+    var projectionMatrix = null;
 
     switch (_toolState) {
       case 'single':
-        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        projectionMatrix = buildProjectionMatrix(w, h, zoom);
         const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
         // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, we should emit event and allow something up top to set it.
         // but for now, edit in place:
         scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
         break;
+      case 'single.moving':
+        const fromScr = movingFrom;
+        const toScr = [x, y];
+        const model = scene.entities[0].model;
+        const selectedVerts = scene.selectedVerts;
+        const frame = Math.floor(scene.entities[0].frame);
+        projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
+        movingFrom = [x, y];
       default:
         console.warn(`onMouseMove when toolState=${_toolState} is not yet implemented`);
     }

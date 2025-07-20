@@ -185,7 +185,7 @@ export default function(){
 
             // var selectedVertIndexBuf = gl.createBuffer();
             // var sweepBoxVertBuf = gl.createBuffer();
-            var movingFrom;
+            // var movingFrom;
             // function ndcToWorld(vNDC){
             //     var invProjMat = mat4.create();
             //     mat4.invert(invProjMat, projectionMatrix);
@@ -197,43 +197,43 @@ export default function(){
             //     vec4.transformMat4(vWorld, vCam, invCamSpaceMat);
             //     return vWorld;
             // }
-            function moveSelectedVerts(fromScr, toScr){
-                var w = $canvas[0].clientWidth;
-                var h = $canvas[0].clientHeight;
-                var fromNDC = [fromScr[0]/w*2-1, fromScr[1]/h*-2+1, 0, 1];
-                var toNDC = [toScr[0]/w*2-1, toScr[1]/h*-2+1, 0, 1];
-                var fromObj = ndcToWorld(fromNDC);
-                var toObj = ndcToWorld(toNDC);
-                var delta = vec4.create();
-                vec4.subtract(delta, toObj, fromObj);
-                $scope.selectedVerts.forEach((vertIndex) => {
-                    var vert = $scope.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts[vertIndex];
-                    vert.x += delta[0];
-                    vert.y += delta[1];
-                    vert.z += delta[2];
-                });
-            }
-            $scope.onCanvasMousemove = (evt) => {
-                var fn = $scope.onCanvasMousemove[$scope.toolState.get()];
-                return fn && fn(evt);
-            };
+            // function moveSelectedVerts(fromScr, toScr){
+            //     var w = $canvas[0].clientWidth;
+            //     var h = $canvas[0].clientHeight;
+            //     var fromNDC = [fromScr[0]/w*2-1, fromScr[1]/h*-2+1, 0, 1];
+            //     var toNDC = [toScr[0]/w*2-1, toScr[1]/h*-2+1, 0, 1];
+            //     var fromObj = ndcToWorld(fromNDC);
+            //     var toObj = ndcToWorld(toNDC);
+            //     var delta = vec4.create();
+            //     vec4.subtract(delta, toObj, fromObj);
+            //     $scope.selectedVerts.forEach((vertIndex) => {
+            //         var vert = $scope.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts[vertIndex];
+            //         vert.x += delta[0];
+            //         vert.y += delta[1];
+            //         vert.z += delta[2];
+            //     });
+            // }
+            // $scope.onCanvasMousemove = (evt) => {
+            //     var fn = $scope.onCanvasMousemove[$scope.toolState.get()];
+            //     return fn && fn(evt);
+            // };
             $scope.onCanvasMousemove['move.moving'] = (evt) => {
                 var fromScr = movingFrom;
                 var toScr = [evt.offsetX, evt.offsetY];
                 moveSelectedVerts(fromScr, toScr);
                 movingFrom = [evt.offsetX, evt.offsetY];
             };
-            $scope.onCanvasMousemove['single'] = (evt) => {
-                var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
-                $scope.selectedVerts.length = 0;
-                $scope.selectedVerts.push(closestVertIndex);
-            };
-            $scope.onCanvasMousemove['single.moving'] = (evt) => {
-                var fromScr = movingFrom;
-                var toScr = [evt.offsetX, evt.offsetY];
-                moveSelectedVerts(fromScr, toScr);
-                movingFrom = [evt.offsetX, evt.offsetY];
-            };
+            // $scope.onCanvasMousemove['single'] = (evt) => {
+            //     var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
+            //     $scope.selectedVerts.length = 0;
+            //     $scope.selectedVerts.push(closestVertIndex);
+            // };
+            // $scope.onCanvasMousemove['single.moving'] = (evt) => {
+            //     var fromScr = movingFrom;
+            //     var toScr = [evt.offsetX, evt.offsetY];
+            //     moveSelectedVerts(fromScr, toScr);
+            //     movingFrom = [evt.offsetX, evt.offsetY];
+            // };
             $scope.onCanvasMousemove['sweep.sweeping'] = (evt) => {
                 var selectedVerts = getVertsIn(movingFrom[0], movingFrom[1],
                     evt.offsetX, evt.offsetY);
@@ -256,10 +256,10 @@ export default function(){
                 ];
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
             }
-            $scope.onCanvasMousedown = (evt) => {
-                var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
-                return fn && fn(evt);
-            }
+            // $scope.onCanvasMousedown = (evt) => {
+            //     var fn = $scope.onCanvasMousedown[$scope.toolState.get()];
+            //     return fn && fn(evt);
+            // }
             var newtri;
             ['addtri', 'addtri.vert2', 'addtri.vert3'].forEach((ts) => {
                 $scope.onCanvasMousemove[ts] = (evt) => {
@@ -294,43 +294,43 @@ export default function(){
                 movingFrom = [evt.offsetX, evt.offsetY];
                 $scope.toolState.set('move.moving');
             }
-            $scope.onCanvasMousedown['single'] = (evt) => {
-                movingFrom = [evt.offsetX, evt.offsetY];
-                // and stop playing? or prevent this if playing?
-                $scope.toolState.set('single.moving');
-            }
+            // $scope.onCanvasMousedown['single'] = (evt) => {
+            //     movingFrom = [evt.offsetX, evt.offsetY];
+            //     // and stop playing? or prevent this if playing?
+            //     $scope.toolState.set('single.moving');
+            // }
             $scope.onCanvasMousedown['sweep'] = (evt) => {
                 movingFrom = [evt.offsetX, evt.offsetY];
                 $scope.toolState.set('sweep.sweeping');
             }
-            $scope.onCanvasMouseup = (evt) => {
-                var fn = $scope.onCanvasMouseup[$scope.toolState.get()];
-                return fn && fn(evt);
-            }
+            // $scope.onCanvasMouseup = (evt) => {
+            //     var fn = $scope.onCanvasMouseup[$scope.toolState.get()];
+            //     return fn && fn(evt);
+            // }
             $scope.onCanvasMouseup['move.moving'] = (evt) => {
                 movingFrom = null;
                 $scope.toolState.set('move');
             }
-            $scope.onCanvasMouseup['single.moving'] = (evt) => {
-                movingFrom = null;
-                $scope.toolState.set('single');
-            }
+            // $scope.onCanvasMouseup['single.moving'] = (evt) => {
+            //     movingFrom = null;
+            //     $scope.toolState.set('single');
+            // }
             $scope.onCanvasMouseup['sweep.sweeping'] = (evt) => {
                 movingFrom = null;
                 $scope.toolState.set('sweep');
             }
-            $scope.onCanvasMouseleave = (evt) => {
-                var fn = $scope.onCanvasMouseleave[$scope.toolState.get()];
-                return fn && fn(evt);
-            }
+            // $scope.onCanvasMouseleave = (evt) => {
+            //     var fn = $scope.onCanvasMouseleave[$scope.toolState.get()];
+            //     return fn && fn(evt);
+            // }
             $scope.onCanvasMouseup['move.moving'] = (evt) => {
                 movingFrom = null;
                 $scope.toolState.set('move');
             }
-            $scope.onCanvasMouseleave['single.moving'] = (evt) => {
-                movingFrom = null;
-                $scope.toolState.set('single');
-            }
+            // $scope.onCanvasMouseleave['single.moving'] = (evt) => {
+            //     movingFrom = null;
+            //     $scope.toolState.set('single');
+            // }
 
             // var sweepShaderProgram = createSweepShaderProgram(gl);
             // gl.useProgram(sweepShaderProgram);
