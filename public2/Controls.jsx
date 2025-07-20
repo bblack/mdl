@@ -7,7 +7,11 @@ export default function Controls({
 }) {
   const ent = scene.entities[0];
   const model = ent.model;
-  const frame = Math.floor(ent.frame);
+  const [frame, setFrame] = useState(Math.floor(ent.frame));
+
+  setTimeout(
+    () => setFrame(Math.floor(ent.frame)), 100
+  );
 
   const toolButtons = TOOLS.map((tool) =>
     <button type='button'
@@ -51,8 +55,7 @@ export default function Controls({
       <hr/>
 
       <h3>Animation</h3>
-      {/* max='{{ model.frames.length - 1 }}' */}
-      {/* onChange='{{ stop() }}' */}
+
       <input type='range' min='0' max={model.frames.length - 1} value={ent.frame} onChange={onChangeFrame} />
 
       <button onClick={playing ? onClickStop : onClickPlay}>

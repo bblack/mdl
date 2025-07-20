@@ -340,11 +340,8 @@ angular.module('mdlr', [])
           scene: $scope.scene,
           playing: $scope.playing,
           toolState: $scope.toolState,
-          onOpen: (evt) => {
-            debugger;
-            $scope.$emit('open', evt)
-          },
-          onSave: (evt) => { $scope.$emit('save', evt) },
+          onOpen: (evt) => $scope.$emit('open', evt),
+          onSave: (evt) => $scope.$emit('save', evt),
           onClickPlay: () => $scope.$apply(play),
           onClickStop: () => $scope.$apply(stop),
           onToolSelected: (tool) => { $scope.$apply(() => $scope.toolState.set(tool)) },
