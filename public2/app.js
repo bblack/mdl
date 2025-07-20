@@ -347,7 +347,7 @@ angular.module('mdlr', [])
           onSave: (evt) => { $scope.$emit('save', evt) },
           onClickPlay: () => $scope.$apply(play),
           onClickStop: () => $scope.$apply(stop),
-          onToolStateChange: () => { },
+          onToolSelected: (tool) => { $scope.$apply(() => $scope.toolState.set(tool)) },
           onChangeFrame: (evt) => {
             const newFrame = evt.target.value;
             $scope.$apply(() =>

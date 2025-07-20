@@ -3,11 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 const TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
 
 export default function Controls({
-  scene, playing, toolState, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave
+  scene, playing, toolState, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected
 }) {
-  // const [modelVertexCount, setModelVertexCount] = useState(null);
-  // const [modelFaceCount, setModelFaceCount] = useState(null);
-
   const ent = scene.entities[0];
   const model = ent.model;
   const frame = Math.floor(ent.frame);
@@ -15,7 +12,7 @@ export default function Controls({
   const toolButtons = TOOLS.map((tool) =>
     <button type='button'
       disabled={tool == toolState.get().split(".")[0]}
-      onClick={() => toolState.set(tool)}
+      onClick={() => onToolSelected(tool)}
     >
       {tool}
     </button>
