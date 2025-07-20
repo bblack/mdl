@@ -22,6 +22,7 @@ import './components/angular/angular.min.js';
 import './components/buffer/buffer.js';
 import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import Controls from './Controls.jsx';
 import PerspectiveProjection from './PerspectiveProjection.jsx';
 import OrthoWireProjection from './OrthoWireProjection.jsx';
 import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
@@ -273,20 +274,25 @@ angular.module('mdlr', [])
     }
     return Mdl;
 })
-.controller('RootController', function($scope) {
+.controller('RootController', function($scope, $element) {
   var lastTickTime;
 
   $scope.selectedVerts = [];
+  $scope.scene = {
+    selectedVerts: $scope.selectedVerts,
+    entities: []
+  };
+  $scope.playing = false;
 
-  $scope.$on('clickPlay', ($evt) => {
+  const play = function() {
     if ($scope.playing) { return; }
     $scope.playing = true;
     lerpFrame();
-  });
+  }
 
-  $scope.$on('clickStop', ($evt) => {
+  const stop = function() {
     $scope.playing = false;
-  });
+  }
 
   $scope.$on('open', ($evt) => {
     var file = $element.find('input#file')[0].files[0];
@@ -306,29 +312,75 @@ angular.module('mdlr', [])
     window.location = URL.createObjectURL(mdlblob);
   });
 
+  const reactRoot = createRoot($element[0].querySelector("#controls"));
+
+  $scope.$watch('scene.entities[0]', (ent) => {
+    if (!ent) return;
+
+    renderControls(reactRoot);
+  });
+
+  $scope.$watch('playing', (newVal) => {
+    renderControls(reactRoot);
+  });
+
+  $scope.$watch('toolState.$name', (newVal) => {
+    renderControls(reactRoot);
+  });
+
+  $scope.$watch('scene.entities[0].frame', (frame) => {
+    console.log("frame is now " + frame + "; rendering Controls")
+    renderControls(reactRoot);
+  })
+
+  function renderControls(reactRoot) {
+    reactRoot.render(
+      React.createElement(
+        Controls,
+        {
+          scene: $scope.scene,
+          playing: $scope.playing,
+          toolState: $scope.toolState,
+          onOpen: () => { },
+          onSave: () => { },
+          onClickPlay: () => $scope.$apply(play),
+          onClickStop: () => $scope.$apply(stop),
+          onToolStateChange: () => { },
+          onChangeFrame: (evt) => {
+            const newFrame = evt.target.value;
+            $scope.$apply(() =>
+              $scope.scene.entities.forEach((ent) => ent.frame = newFrame)
+            );
+          }
+        },
+        ''
+      )
+    );
+  }
+
   function lerpFrame(){
-    if (!$scope.playing) {
+    if ($scope.playing) {
+      const now = Date.now();
+      const lerp = !lastTickTime ? 0 : (now - lastTickTime) / 100;
+
+      $scope.scene.entities.forEach((ent) => {
+        ent.frame = (ent.frame + lerp) % ent.model.frames.length;
+        console.log("set entity frame to " + ent.frame);
+      });
+
+      lastTickTime = now;
+    } else {
+      $scope.scene.entities.forEach((ent) => {
+        ent.frame = Math.floor(ent.frame);
+      });
+
       lastTickTime = null;
-      $scope.frame = Math.floor($scope.frame);
-      return;
     }
-
-    if (!lastTickTime) lastTickTime = Date.now();
-    var newTickTime = Date.now();
-    var lerp = (newTickTime - lastTickTime) / 100;
-
-    lastTickTime = newTickTime;
-    $scope.frame = ($scope.frame + lerp) % $scope.model.frames.length;
-
-    // WARNING! the above is interfered with by the template which has an <input ng-model='$root.frame'>.
-    // even not touching that input at all, it will continually set $root.frame back to 0 on every digest.
 
     requestAnimationFrame(lerpFrame);
   }
 })
 .controller('ControlsController', function($scope, $interval, $rootScope, $element){
-    $scope.TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
-
     // here, i think, we should emit this change upward in the same way that we do when a new model is loaded:
     //
     // 1. $scope.$emit from here
@@ -367,11 +419,7 @@ angular.module('mdlr', [])
           $scope.$emit('modelbuffer', buf);
       });
 
-      const scene = {
-        selectedVerts: $scope.selectedVerts,
-        entities: []
-      };
-
+      const scene = $scope.scene;
       const reactRoot = createRoot($element[0]);
 
       $scope.$watch('frame', (newVal) =>
@@ -381,6 +429,8 @@ angular.module('mdlr', [])
       $scope.$watch('palette', (newVal) => scene.palette = newVal);
 
       $scope.$watch('model', (model) => {
+        if (!model) return;
+
         scene.entities = [
           {model: model, frame: $scope.frame}
         ];

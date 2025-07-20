@@ -87,56 +87,7 @@
     </head>
     <body>
       <div ng-controller='RootController'>
-        <div id='controls' ng-controller='ControlsController'>
-            <div>
-                <h3>File</h3>
-                <input type='file' id='file'
-                    onchange='angular.element(this).scope().open()'></input>
-                <button type='button' ng-click='save()'>Save</button>
-            </div>
-            <h3>Model info</h3>
-            <table>
-                <tr>
-                    <td>Vertices</td>
-                    <td>{{ model.texCoords.length }}</td>
-                </tr>
-                <tr>
-                    <td>Faces</td>
-                    <td>{{ model.triangles.length }}</td>
-                </tr>
-                <tr>
-                    <td>Frames</td>
-                    <td>{{ model.frames.length }}</td>
-                </tr>
-                <tr>
-                    <td>Skins</td>
-                    <td>{{ model.skins.length }}</td>
-                </tr>
-            </table>
-            <hr/>
-
-            <h3>Animation</h3>
-            <input type='range'
-                min='0' max='{{ model.frames.length - 1 }}'
-                ng-model='$root.frame' ng-change='stop()' />
-            <button ng-if='!playing' ng-click='play()'>play</button>
-            <button ng-if='playing' ng-click='stop()'>stop</button>
-            {{ model.frames[frame].simpleFrame.name }}
-            <hr/>
-
-            <h3>Skin</h3>
-            View skin...
-            <hr/>
-            <h3>Tools</h3>
-            <div>
-                <button type='button' ng-repeat='tool in TOOLS'
-                    ng-disabled='tool == toolState.get().split(".")[0]'
-                    ng-click='toolState.set(tool)'>
-                    {{tool}}
-                </button>
-            </div>
-            <hr/>
-
+        <div id='controls'>
         </div><div id='quadview' ng-controller='QuadViewController'>
         </div>
         <!-- new shit here: -->
