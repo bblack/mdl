@@ -25,6 +25,7 @@ import { createRoot } from 'react-dom/client'
 import Controls from './Controls.jsx';
 import PerspectiveProjection from './PerspectiveProjection.jsx';
 import OrthoWireProjection from './OrthoWireProjection.jsx';
+import QuadView from './QuadView.jsx';
 import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
 
 angular.module('mdlr', [])
@@ -274,7 +275,7 @@ angular.module('mdlr', [])
     }
     return Mdl;
 })
-.controller('RootController', function($scope, $element) {
+.controller('RootController', function($scope, $element, $http) {
   var lastTickTime;
 
   $scope.selectedVerts = [];
@@ -311,29 +312,69 @@ angular.module('mdlr', [])
     window.location = URL.createObjectURL(mdlblob);
   });
 
-  const reactRoot = createRoot($element[0].querySelector("#controls"));
+  $http.get('palette.lmp', {responseType: 'arraybuffer'})
+    .then(function(res){
+        const parsePalette = function(buf) {
+          var bytes = new Uint8Array(buf);
+          return new Array(256).fill(null)
+            .map((e, i) => [bytes[i*3], bytes[i*3 + 1], bytes[i*3 + 2]]);
+        }
+        $scope.palette = parsePalette(res.data);
+    })
+    .then(() => $http.get('/player.mdl', {responseType: 'arraybuffer'}))
+    .then(function(res){
+        var buf = new buffer.Buffer(new Uint8Array(res.data));
+        $scope.$emit('modelbuffer', buf);
+    });
+
+  $scope.selectedVerts = [];
+
+
+  const scene = $scope.scene;
+
+  $scope.$watch('frame', (newVal) =>
+    scene.entities.forEach(ent => ent.frame = newVal)
+  );
+
+  $scope.$watch('palette', (newVal) => scene.palette = newVal);
+
+  $scope.$watch('model', (model) => {
+    if (!model) return;
+    debugger;
+
+    scene.entities = [
+      {model: model, frame: $scope.frame}
+    ];
+  });
+
+  const controlsRoot = createRoot($element[0].querySelector("#controls"));
+  const quadRoot = createRoot($element[0].querySelector('#quadview'));
 
   $scope.$watch('scene.entities[0]', (ent) => {
     if (!ent) return;
 
-    renderControls(reactRoot);
+    renderControls(controlsRoot);
+    renderQuad(quadRoot);
   });
 
   $scope.$watch('playing', (newVal) => {
-    renderControls(reactRoot);
+    renderControls(controlsRoot);
+    renderQuad(quadRoot);
   });
 
   $scope.$watch('toolState.$name', (newVal) => {
-    renderControls(reactRoot);
+    renderControls(controlsRoot);
+    renderQuad(quadRoot);
   });
 
   $scope.$watch('scene.entities[0].frame', (frame) => {
     console.log("frame is now " + frame + "; rendering Controls")
-    renderControls(reactRoot);
+    renderControls(controlsRoot);
+    renderQuad(quadRoot);
   })
 
-  function renderControls(reactRoot) {
-    reactRoot.render(
+  function renderControls(controlsRoot) {
+    controlsRoot.render(
       React.createElement(
         Controls,
         {
@@ -351,6 +392,19 @@ angular.module('mdlr', [])
               $scope.scene.entities.forEach((ent) => ent.frame = newFrame)
             );
           }
+        },
+        ''
+      )
+    );
+  }
+
+  function renderQuad(quadRoot) {
+    quadRoot.render(
+      React.createElement(
+        QuadView,
+        {
+          scene: $scope.scene,
+          toolState: $scope.toolState
         },
         ''
       )
@@ -378,94 +432,6 @@ angular.module('mdlr', [])
 
     requestAnimationFrame(lerpFrame);
   }
-})
-.controller('QuadViewController', function($scope, $rootScope, $http, $element){
-    $scope.selectedVerts = [];
-
-    $http.get('palette.lmp', {responseType: 'arraybuffer'})
-      .then(function(res){
-          const parsePalette = function(buf) {
-            var bytes = new Uint8Array(buf);
-            return new Array(256).fill(null)
-              .map((e, i) => [bytes[i*3], bytes[i*3 + 1], bytes[i*3 + 2]]);
-          }
-          $rootScope.palette = parsePalette(res.data);
-      })
-      .then(() => $http.get('/player.mdl', {responseType: 'arraybuffer'}))
-      .then(function(res){
-          var buf = new buffer.Buffer(new Uint8Array(res.data));
-          $scope.$emit('modelbuffer', buf);
-      });
-
-      const scene = $scope.scene;
-      const reactRoot = createRoot($element[0]);
-
-      $scope.$watch('frame', (newVal) =>
-        scene.entities.forEach(ent => ent.frame = newVal)
-      );
-
-      $scope.$watch('palette', (newVal) => scene.palette = newVal);
-
-      $scope.$watch('model', (model) => {
-        if (!model) return;
-
-        scene.entities = [
-          {model: model, frame: $scope.frame}
-        ];
-
-        const renderReactEl = ({ mv, scene, toolState }) => {
-          console.log('rendering react element')
-
-          const paneNW = React.createElement(
-            "div",
-            {className: 'pane n w',},
-            React.createElement(
-              OrthoWireProjection,
-              {mv: [1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1], scene: scene, toolState: toolState},
-              "" // contents/children
-            )
-          );
-          const paneNE = React.createElement(
-            "div",
-            {className: 'pane n e',},
-            React.createElement(
-              OrthoWireProjection,
-              {mv: [0,0,1,0,  1,0,0,0,  0,1,0,0,  0,0,40,1], scene: scene, toolState: toolState},
-              "" // contents/children
-            )
-          );
-          const paneSW = React.createElement(
-            "div",
-            {className: 'pane s w',},
-            React.createElement(
-              OrthoWireProjection,
-              {mv: [0,1,0,0,  -1,0,0,0,  0,0,1,0,  0,0,40,1], scene: scene, toolState: toolState},
-              "" // contents/children
-            )
-          );
-          const paneSE = React.createElement(
-            "div",
-            {className: 'pane s e',},
-            React.createElement(
-              PerspectiveProjection,
-              {mv: [1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1], scene: scene, toolState: toolState},
-              "" // contents/children
-            )
-          );
-          const reactEl = React.createElement(
-            "div",
-            null,
-            [paneNW, paneNE, paneSW, paneSE]
-          )
-
-          reactRoot.render(reactEl);
-        }
-
-        renderReactEl({
-          scene: scene,
-          toolState: $scope.toolState
-        });
-      });
 })
 .service('MdlNorms', function($http){
     var norms = []
@@ -495,6 +461,7 @@ angular.module('mdlr', [])
         set: (name) => $rootScope.toolState.$name = name
     }
     $rootScope.$on('modelbuffer', (evt, buf) => {
+      debugger;
         $rootScope.model = Mdl.fromBuffer(buf);
         $rootScope.frame = 0;
     })
