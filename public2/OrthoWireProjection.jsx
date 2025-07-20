@@ -507,6 +507,10 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         var vWorld = ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
         break;
+      case 'move':
+        movingFrom = [x, y];
+        toolState.set('move.moving');
+        break;
       case 'single':
         movingFrom = [x, y];
         toolState.set('single.moving');
@@ -530,6 +534,9 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     const h = canvas.height;
 
     switch (_toolState) {
+      case 'move.moving':
+        movingFrom = null;
+        toolState.set('move');
       case 'single.moving':
         movingFrom = null;
         toolState.set('single');
@@ -586,6 +593,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
         break;
       case 'single.moving':
+      case 'move.moving':
         const fromScr = movingFrom;
         const toScr = [x, y];
         const model = scene.entities[0].model;
@@ -594,6 +602,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         projectionMatrix = buildProjectionMatrix(w, h, zoom);
         moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
         movingFrom = [x, y];
+        break;
       case 'sweep.sweeping':
         projectionMatrix = buildProjectionMatrix(w, h, zoom);
         selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,

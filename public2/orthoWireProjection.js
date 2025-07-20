@@ -217,12 +217,12 @@ export default function(){
             //     var fn = $scope.onCanvasMousemove[$scope.toolState.get()];
             //     return fn && fn(evt);
             // };
-            $scope.onCanvasMousemove['move.moving'] = (evt) => {
-                var fromScr = movingFrom;
-                var toScr = [evt.offsetX, evt.offsetY];
-                moveSelectedVerts(fromScr, toScr);
-                movingFrom = [evt.offsetX, evt.offsetY];
-            };
+            // $scope.onCanvasMousemove['move.moving'] = (evt) => {
+            //     var fromScr = movingFrom;
+            //     var toScr = [evt.offsetX, evt.offsetY];
+            //     moveSelectedVerts(fromScr, toScr);
+            //     movingFrom = [evt.offsetX, evt.offsetY];
+            // };
             // $scope.onCanvasMousemove['single'] = (evt) => {
             //     var closestVertIndex = getClosestVert(evt.offsetX, evt.offsetY);
             //     $scope.selectedVerts.length = 0;
@@ -290,10 +290,10 @@ export default function(){
             //     var vWorld = ndcToWorld(vNDC);
             //     $scope.model.addVert(vWorld[0], vWorld[1], vWorld[2]);
             // }
-            $scope.onCanvasMousedown['move'] = (evt) => {
-                movingFrom = [evt.offsetX, evt.offsetY];
-                $scope.toolState.set('move.moving');
-            }
+            // $scope.onCanvasMousedown['move'] = (evt) => {
+            //     movingFrom = [evt.offsetX, evt.offsetY];
+            //     $scope.toolState.set('move.moving');
+            // }
             // $scope.onCanvasMousedown['single'] = (evt) => {
             //     movingFrom = [evt.offsetX, evt.offsetY];
             //     // and stop playing? or prevent this if playing?
@@ -307,10 +307,10 @@ export default function(){
             //     var fn = $scope.onCanvasMouseup[$scope.toolState.get()];
             //     return fn && fn(evt);
             // }
-            $scope.onCanvasMouseup['move.moving'] = (evt) => {
-                movingFrom = null;
-                $scope.toolState.set('move');
-            }
+            // $scope.onCanvasMouseup['move.moving'] = (evt) => {
+            //     movingFrom = null;
+            //     $scope.toolState.set('move');
+            // }
             // $scope.onCanvasMouseup['single.moving'] = (evt) => {
             //     movingFrom = null;
             //     $scope.toolState.set('single');
@@ -323,10 +323,10 @@ export default function(){
             //     var fn = $scope.onCanvasMouseleave[$scope.toolState.get()];
             //     return fn && fn(evt);
             // }
-            $scope.onCanvasMouseup['move.moving'] = (evt) => {
-                movingFrom = null;
-                $scope.toolState.set('move');
-            }
+            // $scope.onCanvasMouseup['move.moving'] = (evt) => {
+            //     movingFrom = null;
+            //     $scope.toolState.set('move');
+            // }
             // $scope.onCanvasMouseleave['single.moving'] = (evt) => {
             //     movingFrom = null;
             //     $scope.toolState.set('single');
