@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 const TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
 
-export default function Controls({ scene, playing, toolState, onClickPlay, onClickStop, onChangeFrame }) {
+export default function Controls({
+  scene, playing, toolState, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave
+}) {
   // const [modelVertexCount, setModelVertexCount] = useState(null);
   // const [modelFaceCount, setModelFaceCount] = useState(null);
 
@@ -23,10 +25,10 @@ export default function Controls({ scene, playing, toolState, onClickPlay, onCli
     <>
       <div>
           <h3>File</h3>
-          {/* onchange: angular.element(this).scope().open() */}
           <input type='file' id='file'
-              ></input>
-          <button type='button' ng-click='save()'>Save</button>
+            onChange={(evt) => onOpen(evt.target.files[0])}>
+          </input>
+          <button type='button' onClick={onSave}>Save</button>
       </div>
       <h3>Model info</h3>
       <table>

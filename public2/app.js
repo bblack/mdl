@@ -207,8 +207,8 @@ angular.module('mdlr', [])
         // calc scale & translate.
         var maxvert = [-Infinity, -Infinity, -Infinity];
         var minvert = [Infinity, Infinity, Infinity];
-        for (f of this.frames) {
-            for (v of f.simpleFrame.verts) {
+        for (var f of this.frames) {
+            for (var v of f.simpleFrame.verts) {
                 if (v.x < minvert[0]) minvert[0] = v.x;
                 if (v.x > maxvert[0]) maxvert[0] = v.x;
                 if (v.y < minvert[1]) minvert[1] = v.y;
@@ -294,8 +294,7 @@ angular.module('mdlr', [])
     $scope.playing = false;
   }
 
-  $scope.$on('open', ($evt) => {
-    var file = $element.find('input#file')[0].files[0];
+  $scope.$on('open', ($evt, file) => {
     var fr = new FileReader();
     fr.onloadend = (a,b,c) => {
         if (fr.readyState != FileReader.DONE) throw 'status bad';
@@ -341,8 +340,11 @@ angular.module('mdlr', [])
           scene: $scope.scene,
           playing: $scope.playing,
           toolState: $scope.toolState,
-          onOpen: () => { },
-          onSave: () => { },
+          onOpen: (evt) => {
+            debugger;
+            $scope.$emit('open', evt)
+          },
+          onSave: (evt) => { $scope.$emit('save', evt) },
           onClickPlay: () => $scope.$apply(play),
           onClickStop: () => $scope.$apply(stop),
           onToolStateChange: () => { },
@@ -379,27 +381,6 @@ angular.module('mdlr', [])
 
     requestAnimationFrame(lerpFrame);
   }
-})
-.controller('ControlsController', function($scope, $interval, $rootScope, $element){
-    // here, i think, we should emit this change upward in the same way that we do when a new model is loaded:
-    //
-    // 1. $scope.$emit from here
-    // 2. $rootScope.$on to react (and store) at root level
-    // 3. within that, store and set $rootScope.playing and $rootScope.frame
-    //
-    // maybe that will solve the porblem of perspective pane not being alerted to changes in $scope.$root.frame?
-    $scope.play = function(){
-      $scope.$emit('clickPlay');
-    };
-    $scope.stop = function(){
-      $scope.$emit('clickStop');
-    };
-    $scope.open = function(evt){
-      $scope.$emit('open');
-    }
-    $scope.save = function(){
-      $scope.$emit('save');
-    }
 })
 .controller('QuadViewController', function($scope, $rootScope, $http, $element){
     $scope.selectedVerts = [];
