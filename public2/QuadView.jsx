@@ -1,11 +1,16 @@
 import PerspectiveProjection from './PerspectiveProjection.jsx';
 import OrthoWireProjection from './OrthoWireProjection.jsx';
 
-export default function QuadView({ scene, toolState }) {
+export default function QuadView({ scene, toolState, onToolSelected }) {
+  function _onToolSelected(x) {
+      onToolSelected(x);
+  }
+
   return (
     <div id='quadview'>
       <div className='pane n w'>
         <OrthoWireProjection scene={scene} toolState={toolState}
+          onToolSelected={_onToolSelected}
           mv={[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]}
         />
       </div>

@@ -332,10 +332,12 @@ function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
 }
 
 // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
-export default function OrthoWireProjection({mv, scene, toolState}) {
+export default function OrthoWireProjection({mv, scene, toolState, onToolSelected}) {
   console.log('OrthoWireProjection entered');
 
   const canvasRef = useRef(null);
+  const movingFromRef = useRef(null);
+
   const camSpaceMatrix = mv;
   var zoom = 1/40;
 
@@ -347,7 +349,6 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
   var sweepShaderProgram;
   var sweepBoxVertBuf;
 
-  var movingFrom;
   var newtri;
   var sweepBoxVerts;
 
@@ -462,7 +463,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
               svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
-          if (toolState.get() == 'sweep.sweeping') {
+          if (toolState == 'sweep.sweeping') {
             drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts);
           }
 
@@ -475,29 +476,28 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
 
   function onMouseDown(evt) {
     const canvas = canvasRef.current;
-    const _toolState = toolState.get();
     const x = evt.nativeEvent.offsetX;
     const y = evt.nativeEvent.offsetY;
     const w = canvas.width;
     const h = canvas.height;
 
-    switch (_toolState) {
+    switch (toolState) {
       case 'addtri':
         newtri = {
           facesFront: 0,
           vertIndeces: [scene.selectedVerts[0]]
         };
-        toolState.set('addtri.vert2');
+        onToolSelected('addtri.vert2');
         break;
       case 'addtri.vert2':
         newtri.vertIndeces.push(scene.selectedVerts[0]);
-        toolState.set('addtri.vert3');
+        onToolSelected('addtri.vert3');
         break;
       case 'addtri.vert3':
         newtri.vertIndeces.push(scene.selectedVerts[0]);
         scene.entities[0].model.triangles.push(newtri);
         newtri = null;
-        toolState.set('addtri');
+        onToolSelected('addtri');
         break;
       case 'addvert':
         var xNDC = x / canvas.clientWidth * 2 - 1;
@@ -508,69 +508,64 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
         break;
       case 'move':
-        movingFrom = [x, y];
-        toolState.set('move.moving');
+        movingFromRef.current = [x, y];
+        onToolSelected('move.moving');
         break;
       case 'single':
-        movingFrom = [x, y];
-        toolState.set('single.moving');
+        movingFromRef.current = [x, y];
+        onToolSelected('single.moving');
         break;
       case 'sweep':
-        movingFrom = [x, y];
+        movingFromRef.current = [x, y];
         sweepBoxVerts = null;
-        toolState.set('sweep.sweeping');
+        onToolSelected('sweep.sweeping');
         break;
       default:
-        // console.warn(`onMouseDown when toolState=${_toolState} is not yet implemented`);
     }
   }
 
   function onMouseUp(evt) {
     const canvas = canvasRef.current;
-    const _toolState = toolState.get();
     const x = evt.nativeEvent.offsetX;
     const y = evt.nativeEvent.offsetY;
     const w = canvas.width;
     const h = canvas.height;
 
-    switch (_toolState) {
+    switch (toolState) {
       case 'move.moving':
-        movingFrom = null;
-        toolState.set('move');
+        movingFromRef.current = null;
+        onToolSelected('move');
       case 'single.moving':
-        movingFrom = null;
-        toolState.set('single');
+        movingFromRef.current = null;
+        onToolSelected('single');
         break;
       case 'sweep.sweeping':
-        movingFrom = null;
-        toolState.set('sweep');
+        movingFromRef.current = null;
+        onToolSelected('sweep');
         break;
       default:
-        // console.warn(`onMouseUp when toolState=${_toolState} is not yet implemented`);
     }
   }
 
   function onMouseLeave(evt) {
     const canvas = canvasRef.current;
-    const _toolState = toolState.get();
     const x = evt.nativeEvent.offsetX;
     const y = evt.nativeEvent.offsetY;
     const w = canvas.width;
     const h = canvas.height;
 
-    switch (_toolState) {
+    switch (toolState) {
       case 'single.moving':
-        movingFrom = null;
-        toolState.set('single');
+        movingFromRef.current = null;
+        onToolSelected('single');
         break;
       default:
-        // console.warn(`onMouseLeave when toolState=${_toolState} is not yet implemented`);
     }
   }
 
   function onMouseMove(evt) {
     const canvas = canvasRef.current;
-    const _toolState = toolState.get();
+    const movingFrom = movingFromRef.current;
     const x = evt.nativeEvent.offsetX;
     const y = evt.nativeEvent.offsetY;
     const w = canvas.width;
@@ -579,7 +574,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
     var closestVertIndex = null;
     var selectedVerts = null;
 
-    switch (_toolState) {
+    switch (toolState) {
       case 'addtri':
       case 'addtri.vert2':
       case 'addtri.vert3':
@@ -601,7 +596,7 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
         const frame = Math.floor(scene.entities[0].frame);
         projectionMatrix = buildProjectionMatrix(w, h, zoom);
         moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-        movingFrom = [x, y];
+        movingFromRef.current = [x, y];
         break;
       case 'sweep.sweeping':
         projectionMatrix = buildProjectionMatrix(w, h, zoom);
@@ -628,7 +623,6 @@ export default function OrthoWireProjection({mv, scene, toolState}) {
             toNDC[0], fromNDC[1], 0
         ]);
       default:
-        // console.warn(`onMouseMove when toolState=${_toolState} is not yet implemented`);
     }
   }
 

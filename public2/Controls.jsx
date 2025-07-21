@@ -18,7 +18,7 @@ export default function Controls({
   const toolButtons = TOOLS.map((tool) =>
     <button type='button'
       key={tool}
-      disabled={tool == toolState.get().split(".")[0]}
+      disabled={tool == toolState.split(".")[0]}
       onClick={() => onToolSelected(tool)}
     >
       {tool}

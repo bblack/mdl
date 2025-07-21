@@ -28,11 +28,7 @@ export default function App({ }) {
   // -- members --
   var lastTickTime;
   const selectedVerts = [];
-  const toolState = {
-    $name: 'single',
-    get: () => toolState.$name,
-    set: (name) => toolState.$name = name
-  };
+  const [toolState, setToolState] = useState('single');
   const [scene, _setScene] = useState(
     {
       selectedVerts: selectedVerts,
@@ -102,7 +98,7 @@ export default function App({ }) {
   }
 
   function onToolSelected(tool) {
-    toolState.set(tool);
+    setToolState(tool)
   }
 
   function onChangeFrame(evt) {
@@ -157,7 +153,9 @@ export default function App({ }) {
         onClickStop={onClickStop} onToolSelected={onToolSelected}
         onChangeFrame={onChangeFrame}
       />
-      <QuadView scene={scene} toolState={toolState} />
+      <QuadView scene={scene} toolState={toolState}
+        onToolSelected={onToolSelected}
+      />
     </>
   )
 }
