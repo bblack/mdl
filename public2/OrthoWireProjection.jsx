@@ -337,6 +337,8 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
 
   const canvasRef = useRef(null);
   const movingFromRef = useRef(null);
+  const toolStateRef = useRef(null);
+  const sweepBoxVertsRef = useRef([]);
 
   const camSpaceMatrix = mv;
   var zoom = 1/40;
@@ -350,7 +352,8 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   var sweepBoxVertBuf;
 
   var newtri;
-  var sweepBoxVerts;
+
+  toolStateRef.current = toolState;
 
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
@@ -410,6 +413,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
+      // should we take render() out of this closure, and pass it the refs it needs?
       function render(){
           const selectedVerts = scene.selectedVerts;
 
@@ -463,8 +467,9 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
               svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
-          if (toolState == 'sweep.sweeping') {
-            drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts);
+          if (toolStateRef.current == 'sweep.sweeping') {
+            console.log("drawing sweep box because toolState is " + toolStateRef.current)
+            drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVertsRef.current);
           }
 
           window.requestAnimationFrame(render);
@@ -481,7 +486,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     const w = canvas.width;
     const h = canvas.height;
 
-    switch (toolState) {
+    switch (toolStateRef.current) {
       case 'addtri':
         newtri = {
           facesFront: 0,
@@ -517,7 +522,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
         break;
       case 'sweep':
         movingFromRef.current = [x, y];
-        sweepBoxVerts = null;
+        sweepBoxVertsRef.current = null;
         onToolSelected('sweep.sweeping');
         break;
       default:
@@ -531,7 +536,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     const w = canvas.width;
     const h = canvas.height;
 
-    switch (toolState) {
+    switch (toolStateRef.current) {
       case 'move.moving':
         movingFromRef.current = null;
         onToolSelected('move');
@@ -554,7 +559,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     const w = canvas.width;
     const h = canvas.height;
 
-    switch (toolState) {
+    switch (toolStateRef.current) {
       case 'single.moving':
         movingFromRef.current = null;
         onToolSelected('single');
@@ -574,7 +579,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     var closestVertIndex = null;
     var selectedVerts = null;
 
-    switch (toolState) {
+    switch (toolStateRef.current) {
       case 'addtri':
       case 'addtri.vert2':
       case 'addtri.vert3':
@@ -616,7 +621,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
             y / h * -2 + 1
         ];
 
-        sweepBoxVerts = new Float32Array([
+        sweepBoxVertsRef.current = new Float32Array([
             fromNDC[0], fromNDC[1], 0, // x, y, z NDC
             fromNDC[0], toNDC[1], 0,
             toNDC[0], toNDC[1], 0,
