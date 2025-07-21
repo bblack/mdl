@@ -71,13 +71,18 @@ export default function App({ }) {
     _setScene.apply(this, arguments);
   }
 
-  // TODO: THIS ARE BROKEN! STILL REFER TO ANGULAR SCOPE
   function onOpen(file) {
     var fr = new FileReader();
     fr.onloadend = (a,b,c) => {
         if (fr.readyState != FileReader.DONE) throw 'status bad';
         var buf = fr.result;
-        $scope.$apply(() => $scope.$emit('modelbuffer', buf));
+        const mdl = Mdl.fromBuffer(buf);
+
+        scene.entities[0].model = mdl;
+
+        const newScene = Object.assign({}, scene);
+
+        setScene(scene);
     }
     fr.readAsArrayBuffer(file);
   }
