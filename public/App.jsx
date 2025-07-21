@@ -76,8 +76,7 @@ export default function App({ }) {
     var fr = new FileReader();
     fr.onloadend = (a,b,c) => {
         if (fr.readyState != FileReader.DONE) throw 'status bad';
-        var arraybuffer = fr.result;
-        var buf = new buffer.Buffer(new Uint8Array(arraybuffer));
+        var buf = fr.result;
         $scope.$apply(() => $scope.$emit('modelbuffer', buf));
     }
     fr.readAsArrayBuffer(file);
