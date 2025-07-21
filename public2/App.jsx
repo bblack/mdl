@@ -53,13 +53,11 @@ export default function App({ }) {
         scene.entities = [
           {model: _model, frame: 0}
         ];
-        // debugger;
         setScene(Object.assign({}, scene));
-      })
-      .catch((e) => {
-        console.error(e)
-        // debugger;
-      })
+      });
+    return function cleanup() {
+      cancelAnimationFrame(lerpFrameRequest.current);
+    }
   }, [true]); // constant "true" so's we only do this once
 
   // should this go in an "effect" too? dependent on [playing]?
