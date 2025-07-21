@@ -255,11 +255,12 @@ export default function PerspectiveProjection({mv, scene}) {
     const palette = scene.palette;
     const model = scene.entities[0].model;
     var pixels = new Uint8Array(model.skinWidth * model.skinHeight * 4);
-    pixels.fill(0xff);
-    model.skins[0].data.data.forEach((palidx, pixnum) => {
-        var rgb = palette[palidx];
-        pixels.set(rgb, pixnum * 4);
+    var skinBuffer = new Uint8Array(model.skins[0].data.data);
+    skinBuffer.forEach((palidx, pixnum) => {
+        var rgba = palette[palidx].concat(0xff); // alpha opaque
+        pixels.set(rgba, pixnum * 4);
     });
+
     loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
 
     render();

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import './components/buffer/buffer.js';
+
 import Controls from './Controls.jsx';
 import QuadView from './QuadView.jsx';
 import Mdl from './Mdl.js';
@@ -7,7 +7,6 @@ import Mdl from './Mdl.js';
 function fetchModel() {
   return fetch('/player.mdl')
     .then((res) => res.arrayBuffer())
-    .then((buf) => new buffer.Buffer(new Uint8Array(buf))) // redundant?
     .then((buf) => Mdl.fromBuffer(buf));
 }
 
@@ -72,6 +71,7 @@ export default function App({ }) {
     _setScene.apply(this, arguments);
   }
 
+  // TODO: THESE ARE BROKEN! STILL REFER TO ANGULAR SCOPE
   function onOpen(file) {
     var fr = new FileReader();
     fr.onloadend = (a,b,c) => {
@@ -83,6 +83,7 @@ export default function App({ }) {
     fr.readAsArrayBuffer(file);
   }
 
+  // TODO: THESE ARE BROKEN! STILL REFER TO ANGULAR SCOPE
   function onSave() {
     var mdlbuf = $scope.model.toBuffer();
     var mdlblob = new Blob([mdlbuf], {type: 'application/octet-stream'});
