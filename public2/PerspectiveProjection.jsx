@@ -160,36 +160,16 @@ export default function PerspectiveProjection({mv, scene}) {
   const yawRef = useRef(0);
   const lastScreenPosRef = useRef(null);
 
-  function onMouseMove(evt) {
-    // evt is react's SyntheticBaseEvent. we might use movementX/Y from that instead of computing our own but for now...
-    evt = evt.nativeEvent;
-
-    if (evt.buttons & 1) {
-      const curScreenPos = [evt.offsetX, evt.offsetY];
-      const lastScreenPos = lastScreenPosRef.current || curScreenPos;
-      var pitch = pitchRef.current;
-      var yaw = yawRef.current;
-
-      pitch += (curScreenPos[1] - lastScreenPos[1]) * 0.02;
-      while (pitch > Math.PI*2) pitch -= Math.PI*2;
-      while (pitch < 0) pitch += Math.PI*2;
-
-      yaw += (curScreenPos[0] - lastScreenPos[0]) * 0.02;
-      while (yaw > Math.PI*2) yaw -= Math.PI*2;
-      while (yaw < 0) yaw += Math.PI*2;
-
-      yawRef.current = yaw;
-      pitchRef.current = pitch;
-      lastScreenPosRef.current = curScreenPos;
-    }
-  }
-
   // - must useEffect here, since we depend on canvasRef.current, which is not available until after render.
   // - do NOT want to kick off new render loop on re-render though, if canvas is from prior render, since we already have a render loop going.
   //
   useEffect(() => {
     console.log('PerspectiveProjection: useEffect entered');
+
     const canvas = canvasRef.current;
+
+    if (!canvas) return;
+
     const gl = canvas.getContext('webgl');
 
     window.addEventListener('resize', () => {
@@ -283,7 +263,33 @@ export default function PerspectiveProjection({mv, scene}) {
     loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
 
     render();
-  }, [true]); // dependency on constant "true" so useEffect runs only on first render
+  }, [canvasRef.current]); // dependency on constant "true" so useEffect runs only on first render
+
+  if (scene.entities.length == 0) return null;
+
+  function onMouseMove(evt) {
+    // evt is react's SyntheticBaseEvent. we might use movementX/Y from that instead of computing our own but for now...
+    evt = evt.nativeEvent;
+
+    if (evt.buttons & 1) {
+      const curScreenPos = [evt.offsetX, evt.offsetY];
+      const lastScreenPos = lastScreenPosRef.current || curScreenPos;
+      var pitch = pitchRef.current;
+      var yaw = yawRef.current;
+
+      pitch += (curScreenPos[1] - lastScreenPos[1]) * 0.02;
+      while (pitch > Math.PI*2) pitch -= Math.PI*2;
+      while (pitch < 0) pitch += Math.PI*2;
+
+      yaw += (curScreenPos[0] - lastScreenPos[0]) * 0.02;
+      while (yaw > Math.PI*2) yaw -= Math.PI*2;
+      while (yaw < 0) yaw += Math.PI*2;
+
+      yawRef.current = yaw;
+      pitchRef.current = pitch;
+      lastScreenPosRef.current = curScreenPos;
+    }
+  }
 
   return (
     <canvas ref={canvasRef} onMouseMove={onMouseMove}></canvas>

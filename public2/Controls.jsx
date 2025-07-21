@@ -5,6 +5,8 @@ const TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
 export default function Controls({
   scene, playing, toolState, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected
 }) {
+  if (scene.entities.length == 0) return null;
+
   const ent = scene.entities[0];
   const model = ent.model;
   const [frame, setFrame] = useState(Math.floor(ent.frame));
@@ -15,6 +17,7 @@ export default function Controls({
 
   const toolButtons = TOOLS.map((tool) =>
     <button type='button'
+      key={tool}
       disabled={tool == toolState.get().split(".")[0]}
       onClick={() => onToolSelected(tool)}
     >
@@ -23,7 +26,7 @@ export default function Controls({
   );
 
   return (
-    <>
+    <div id='controls'>
       <div>
           <h3>File</h3>
           <input type='file' id='file'
@@ -73,6 +76,6 @@ export default function Controls({
         {toolButtons}
       </div>
       <hr/>
-    </>
+    </div>
   )
 }

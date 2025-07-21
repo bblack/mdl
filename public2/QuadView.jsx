@@ -3,7 +3,7 @@ import OrthoWireProjection from './OrthoWireProjection.jsx';
 
 export default function QuadView({ scene, toolState }) {
   return (
-    <>
+    <div id='quadview'>
       <div className='pane n w'>
         <OrthoWireProjection scene={scene} toolState={toolState}
           mv={[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]}
@@ -24,6 +24,6 @@ export default function QuadView({ scene, toolState }) {
           mv={[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]}
         />
       </div>
-    </>
+    </div>
   )
 }
