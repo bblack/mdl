@@ -480,134 +480,153 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
 
   }, [true]); // dependency on constant "true" so useEffect runs only on first render
 
-  function onMouseDown(evt) {
-    const canvas = canvasRef.current;
-    const x = evt.nativeEvent.offsetX;
-    const y = evt.nativeEvent.offsetY;
-    const w = canvas.width;
-    const h = canvas.height;
-    const newtri = newtriRef.current;
-
-    switch (toolStateRef.current) {
-      case 'addtri':
+  const handlersByToolState = {
+    'addtri': {
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
+      },
+      onMouseUp: (evt) => {
         newtriRef.current = {
           facesFront: 0,
           vertIndeces: [scene.selectedVerts[0]]
         };
         onToolSelected('addtri.vert2');
-        break;
-      case 'addtri.vert2':
+      }
+    },
+    'addtri.vert2': {
+      // TODO: we should have ONE handler for the TOOL, and that switches behavior on the STATE of the tool.
+      // e.g. one handler for "addtri", which switches behavior (or not, in this case) depending on whether state is .vert2, .vert3, etc
+      onMouseDown: (evt) => {
+        const newtri = newtriRef.current;
         newtri.vertIndeces.push(scene.selectedVerts[0]);
         onToolSelected('addtri.vert3');
-        break;
-      case 'addtri.vert3':
+      },
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
+      }
+    },
+    'addtri.vert3': {
+      // TODO: we should have ONE handler for the TOOL, and that switches behavior on the STATE of the tool.
+      // e.g. one handler for "addtri", which switches behavior (or not, in this case) depending on whether state is .vert2, .vert3, etc
+      onMouseDown: (evt) => {
+        const newtri = newtriRef.current;
         newtri.vertIndeces.push(scene.selectedVerts[0]);
         scene.entities[0].model.triangles.push(newtri);
         newtriRef.current = null;
         onToolSelected('addtri');
-        break;
-      case 'addvert':
+      },
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
+      }
+    },
+    'addvert': {
+      onMouseDown: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
         var xNDC = x / canvas.clientWidth * 2 - 1;
         var yNDC = y / canvas.clientHeight * -2 + 1;
         var vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
         const projectionMatrix = buildProjectionMatrix(w, h, zoom);
         var vWorld = ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
-        break;
-      case 'move':
+      }
+    },
+    'move': {
+      onMouseDown: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         movingFromRef.current = [x, y];
         onToolSelected('move.moving');
-        break;
-      case 'single':
+      }
+    },
+    'move.moving': {
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const fromScr = movingFromRef.current.slice(); // copy
+        const toScr = [x, y];
+        const model = scene.entities[0].model;
+        const selectedVerts = scene.selectedVerts;
+        const frame = Math.floor(scene.entities[0].frame);
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
+        movingFromRef.current = [x, y];
+      },
+      onMouseUp: (evt) => {
+        movingFromRef.current = null;
+        onToolSelected('move');
+      }
+    },
+    'single': {
+      onMouseDown: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         movingFromRef.current = [x, y];
         onToolSelected('single.moving');
-        break;
-      case 'sweep':
+      },
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
+      }
+    },
+    'single.moving': {
+      onMouseLeave: (evt) => {
+        movingFromRef.current = null;
+        onToolSelected('single');
+      },
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const fromScr = movingFromRef.current.slice(); // copy
+        const toScr = [x, y];
+        const model = scene.entities[0].model;
+        const selectedVerts = scene.selectedVerts;
+        const frame = Math.floor(scene.entities[0].frame);
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
+        movingFromRef.current = [x, y];
+      },
+      onMouseUp: (evt) => {
+        movingFromRef.current = null;
+        onToolSelected('single');
+      }
+    },
+    'sweep': {
+      onMouseDown: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         movingFromRef.current = [x, y];
         sweepBoxVertsRef.current = null;
         onToolSelected('sweep.sweeping');
-        break;
-      default:
-    }
-  }
-
-  function onMouseUp(evt) {
-    const canvas = canvasRef.current;
-    const x = evt.nativeEvent.offsetX;
-    const y = evt.nativeEvent.offsetY;
-    const w = canvas.width;
-    const h = canvas.height;
-
-    switch (toolStateRef.current) {
-      case 'move.moving':
-        movingFromRef.current = null;
-        onToolSelected('move');
-      case 'single.moving':
-        movingFromRef.current = null;
-        onToolSelected('single');
-        break;
-      case 'sweep.sweeping':
-        movingFromRef.current = null;
-        onToolSelected('sweep');
-        break;
-      default:
-    }
-  }
-
-  function onMouseLeave(evt) {
-    const canvas = canvasRef.current;
-    const x = evt.nativeEvent.offsetX;
-    const y = evt.nativeEvent.offsetY;
-    const w = canvas.width;
-    const h = canvas.height;
-
-    switch (toolStateRef.current) {
-      case 'single.moving':
-        movingFromRef.current = null;
-        onToolSelected('single');
-        break;
-      default:
-    }
-  }
-
-  function onMouseMove(evt) {
-    const canvas = canvasRef.current;
-    const movingFrom = movingFromRef.current;
-    const x = evt.nativeEvent.offsetX;
-    const y = evt.nativeEvent.offsetY;
-    const w = canvas.width;
-    const h = canvas.height;
-    var projectionMatrix = null;
-    var closestVertIndex = null;
-    var selectedVerts = null;
-
-    switch (toolStateRef.current) {
-      case 'addtri':
-      case 'addtri.vert2':
-      case 'addtri.vert3':
-        projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
-        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
-        break;
-      case 'single':
-        projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
-        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
-        break;
-      case 'single.moving':
-      case 'move.moving':
-        const fromScr = movingFrom;
-        const toScr = [x, y];
-        const model = scene.entities[0].model;
-        selectedVerts = scene.selectedVerts;
-        const frame = Math.floor(scene.entities[0].frame);
-        projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-        movingFromRef.current = [x, y];
-        break;
-      case 'sweep.sweeping':
-        projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,
+      }
+    },
+    'sweep.sweeping': {
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+        const movingFrom = movingFromRef.current;
+        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+        const selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,
           w, h, camSpaceMatrix, projectionMatrix, scene);
 
         scene.selectedVerts.splice(0, scene.selectedVerts.length, ...selectedVerts);
@@ -629,8 +648,38 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
             toNDC[0], toNDC[1], 0,
             toNDC[0], fromNDC[1], 0
         ]);
-      default:
+      },
+      onMouseUp: (evt) => {
+        movingFromRef.current = null;
+        onToolSelected('sweep');
+      }
     }
+  }
+
+  // ---
+
+  function onMouseDown(evt) {
+    const handlers = handlersByToolState[toolStateRef.current];
+    const f = handlers ? handlers.onMouseDown : null;
+    if (f) f(evt);
+  }
+
+  function onMouseLeave(evt) {
+    const handlers = handlersByToolState[toolStateRef.current];
+    const f = handlers ? handlers.onMouseLeave : null;
+    if (f) f(evt);
+  }
+
+  function onMouseMove(evt) {
+    const handlers = handlersByToolState[toolStateRef.current];
+    const f = handlers ? handlers.onMouseMove : null;
+    if (f) f(evt);
+  }
+
+  function onMouseUp(evt) {
+    const handlers = handlersByToolState[toolStateRef.current];
+    const f = handlers ? handlers.onMouseUp : null;
+    if (f) f(evt);
   }
 
   function onWheel(evt) {
