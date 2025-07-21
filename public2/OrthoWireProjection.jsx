@@ -339,6 +339,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   const movingFromRef = useRef(null);
   const toolStateRef = useRef(null);
   const sweepBoxVertsRef = useRef([]);
+  var newtriRef = useRef(null);
 
   const camSpaceMatrix = mv;
   var zoom = 1/40;
@@ -351,7 +352,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   var sweepShaderProgram;
   var sweepBoxVertBuf;
 
-  var newtri;
+
 
   toolStateRef.current = toolState;
 
@@ -485,10 +486,11 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     const y = evt.nativeEvent.offsetY;
     const w = canvas.width;
     const h = canvas.height;
+    const newtri = newtriRef.current;
 
     switch (toolStateRef.current) {
       case 'addtri':
-        newtri = {
+        newtriRef.current = {
           facesFront: 0,
           vertIndeces: [scene.selectedVerts[0]]
         };
@@ -501,7 +503,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
       case 'addtri.vert3':
         newtri.vertIndeces.push(scene.selectedVerts[0]);
         scene.entities[0].model.triangles.push(newtri);
-        newtri = null;
+        newtriRef.current = null;
         onToolSelected('addtri');
         break;
       case 'addvert':
