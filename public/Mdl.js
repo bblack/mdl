@@ -31,24 +31,25 @@ Mdl.fromBuffer = function(buf){
         return b;
     }
     BufferReader.prototype.readFloatLE = function(){
-        var n = this.buf.readFloatLE(this.ptr);
+        var n = new DataView(this.buf).getFloat32(this.ptr, true);
         this.ptr += 4;
         return n;
     }
     BufferReader.prototype.readInt32LE = function(){
-        var n = this.buf.readInt32LE(this.ptr);
+        var n = new DataView(this.buf).getInt32(this.ptr, true);
         this.ptr += 4;
         return n;
     }
     BufferReader.prototype.readStr = function(len){
-        var s = this.buf.toString('utf8', this.ptr, this.ptr + len);
+        var view = new DataView(this.buf, this.ptr, len);
+        var s = new TextDecoder('utf-8').decode(view);
         var termpos = s.indexOf('\u0000');
         if (termpos > -1) s = s.slice(0, termpos);
         this.ptr += len; // will we ever want to keep the ptr at nullterm + 1?
         return s;
     }
     BufferReader.prototype.readUInt8 = function(){
-        var n = this.buf.readUInt8(this.ptr);
+        var n = new DataView(this.buf).getUint8(this.ptr);
         this.ptr += 1;
         return n;
     }
@@ -140,19 +141,26 @@ function BufferWriter(buf){
     this.ptr = 0;
 }
 BufferWriter.prototype.write = function(str, length, encoding){
-    this.buf.write(str, this.ptr, length, encoding);
-    this.ptr += (length === undefined ? str.length : length);
+    const stringBytes = new TextEncoder().encode(str); // Uint8Array
+    const dv = new DataView(this.buf);
+
+    if (length === undefined) length = str.length;
+
+    for (var i = 0; i++; i < length) {
+      dv.setUint8(this.ptr, stringBytes[i]);
+      this.ptr++;
+    }
 }
 BufferWriter.prototype.writeInt32LE = function(val){
-    this.buf.writeInt32LE(val, this.ptr);
+    new DataView(this.buf).setUint32(this.ptr, val, true);
     this.ptr += 4;
 }
 BufferWriter.prototype.writeFloatLE = function(val){
-    this.buf.writeFloatLE(val, this.ptr);
+    new DataView(this.buf).setFloat32(this.ptr, val, true);
     this.ptr += 4;
 }
 BufferWriter.prototype.writeUInt8 = function(val){
-    this.buf.writeUInt8(val, this.ptr);
+    new DataView(this.buf).setUint8(this.ptr, val);
     this.ptr += 1;
 }
 BufferWriter.prototype.writeVec3 = function(val){
@@ -170,9 +178,8 @@ Mdl.prototype.toBuffer = function(){
     var texCoordsSize = this.texCoords.length * 12;
     var trisSize = this.triangles.length * 16;
     var framesSize = this.frames.length * (28 + this.texCoords.length * 4);
-    var mdlbuf = new buffer.Buffer(headerSize + skinsSize + texCoordsSize +
+    var mdlbuf = new ArrayBuffer(headerSize + skinsSize + texCoordsSize +
         trisSize + framesSize);
-    mdlbuf.fill(0x00);
     // calc scale & translate.
     var maxvert = [-Infinity, -Infinity, -Infinity];
     var minvert = [Infinity, Infinity, Infinity];
@@ -207,10 +214,9 @@ Mdl.prototype.toBuffer = function(){
     this.skins.forEach((skin) => {
         if (skin.type != 0) throw 'nyi';
         bw.writeInt32LE(skin.type);
-        var pixels = new buffer.Buffer(skin.data.data);
+        var pixels = new Uint8Array(skin.data.data);
         // REVERSE PALETTE LOOKUP HERE! RGB -> index
-        pixels.copy(bw.buf, bw.ptr);
-        bw.ptr += pixels.length;
+        pixels.forEach((byte) => bw.writeUInt8(byte));
     })
     this.texCoords.forEach((tc) => {
         bw.writeInt32LE(tc.onSeam);

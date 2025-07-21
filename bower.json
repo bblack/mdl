@@ -16,7 +16,6 @@
     "tests"
   ],
   "dependencies": {
-    "gl-matrix": "^2.3.2",
-    "buffer": "^3.46.1"
+    "gl-matrix": "^2.3.2"
   }
 }
