@@ -10,11 +10,6 @@ export default function Controls({
   const ent = scene.entities[0];
   const model = ent.model;
   const [frame, setFrame] = useState(Math.floor(ent.frame));
-
-  setTimeout(
-    () => setFrame(Math.floor(ent.frame)), 100
-  );
-
   const toolButtons = TOOLS.map((tool) =>
     <button type='button'
       key={tool}
@@ -24,6 +19,16 @@ export default function Controls({
       {tool}
     </button>
   );
+
+  useEffect(() => {
+    if (!playing) return;
+
+    const id = setInterval(() => setFrame(Math.floor(entity().frame)), 100);
+
+    return () => clearInterval(id);
+  });
+
+  const entity = () => scene.entities[0];
 
   return (
     <div id='controls'>
