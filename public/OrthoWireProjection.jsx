@@ -338,7 +338,6 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   const canvasRef = useRef(null);
   const movingFromRef = useRef(null);
   const toolStateRef = useRef(null);
-  const newtriRef = useRef(null);
   const componentRef = useRef(null);
 
   const camSpaceMatrix = mv;
@@ -484,8 +483,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   const handlersByToolName = {
     'addtri': {
       onMouseDown: (evt) => {
-        // TODO this should be part of TOOL
-        const newtri = newtriRef.current;
+        const newtri = _toolState().newtri;
 
         switch (_toolState().state) {
           case 'vert2':
@@ -495,11 +493,11 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
           case 'vert3':
             newtri.vertIndeces.push(scene.selectedVerts[0]);
             scene.entities[0].model.triangles.push(newtri);
-            newtriRef.current = null;
+            _toolState().newtri = null;
             onToolSelected('addtri');
             break;
           default: // initial state
-            newtriRef.current = {
+            _toolState().newtri = {
               facesFront: 0,
               vertIndeces: [scene.selectedVerts[0]]
             };
