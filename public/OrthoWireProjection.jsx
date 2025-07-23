@@ -468,8 +468,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
               svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
-          if (toolStateRef.current == 'sweep.sweeping') {
-            console.log("drawing sweep box because toolState is " + toolStateRef.current)
+          if (toolStateRef.current.name == 'sweep.sweeping') {
             drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVertsRef.current);
           }
 
@@ -480,7 +479,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
 
   }, [true]); // dependency on constant "true" so useEffect runs only on first render
 
-  const handlersByToolState = {
+  const handlersByToolName = {
     'addtri': {
       onMouseMove: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
@@ -656,28 +655,32 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     }
   }
 
+  function toolName() {
+    return toolStateRef.current.name;
+  }
+
   // ---
 
   function onMouseDown(evt) {
-    const handlers = handlersByToolState[toolStateRef.current];
+    const handlers = handlersByToolName[toolName()];
     const f = handlers ? handlers.onMouseDown : null;
     if (f) f(evt);
   }
 
   function onMouseLeave(evt) {
-    const handlers = handlersByToolState[toolStateRef.current];
+    const handlers = handlersByToolName[toolName()];
     const f = handlers ? handlers.onMouseLeave : null;
     if (f) f(evt);
   }
 
   function onMouseMove(evt) {
-    const handlers = handlersByToolState[toolStateRef.current];
+    const handlers = handlersByToolName[toolName()];
     const f = handlers ? handlers.onMouseMove : null;
     if (f) f(evt);
   }
 
   function onMouseUp(evt) {
-    const handlers = handlersByToolState[toolStateRef.current];
+    const handlers = handlersByToolName[toolName()];
     const f = handlers ? handlers.onMouseUp : null;
     if (f) f(evt);
   }

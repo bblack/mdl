@@ -27,7 +27,7 @@ export default function App({ }) {
   // -- members --
   var lastTickTime;
   const selectedVerts = [];
-  const [toolState, setToolState] = useState('single');
+  const [toolState, setToolState] = useState({ name: 'single' });
   const [scene, _setScene] = useState(
     {
       selectedVerts: selectedVerts,
@@ -101,8 +101,8 @@ export default function App({ }) {
     stop();
   }
 
-  function onToolSelected(tool) {
-    setToolState(tool)
+  function onToolSelected(toolName) {
+    setToolState({name: toolName})
   }
 
   function onChangeFrame(evt) {
