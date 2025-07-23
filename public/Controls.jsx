@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 
-const TOOLS = ['single', 'sweep', 'move', 'addvert', 'addtri'];
+const TOOL_NAMES = ['single', 'sweep', 'move', 'addvert', 'addtri'];
 
 export default function Controls({
-  scene, playing, toolState, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected
+  scene, playing, tool, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected
 }) {
   if (scene.entities.length == 0) return null;
 
   const ent = scene.entities[0];
   const model = ent.model;
   const [frame, setFrame] = useState(Math.floor(ent.frame));
-  const toolButtons = TOOLS.map((tool) =>
+  const toolButtons = TOOL_NAMES.map((t) =>
     <button type='button'
-      key={tool}
-      disabled={tool == toolState.name.split(".")[0]}
-      onClick={() => onToolSelected(tool)}
+      key={t}
+      disabled={t == tool.name}
+      onClick={() => onToolSelected(t)}
     >
-      {tool}
+      {t}
     </button>
   );
 

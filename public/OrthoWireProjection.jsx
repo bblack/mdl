@@ -332,11 +332,11 @@ function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
 }
 
 // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
-export default function OrthoWireProjection({mv, scene, toolState, onToolSelected}) {
+export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
   console.log('OrthoWireProjection entered');
 
   const canvasRef = useRef(null);
-  const toolStateRef = useRef(null);
+  const toolRef = useRef(null);
   const componentRef = useRef(null);
 
   const camSpaceMatrix = mv;
@@ -350,7 +350,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   var sweepShaderProgram;
   var sweepBoxVertBuf;
 
-  toolStateRef.current = toolState;
+  toolRef.current = tool;
 
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
@@ -464,11 +464,11 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
               svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
-          if (_toolState().name == 'sweep' &&
-            _toolState().state == 'sweeping' &&
-            _toolState().componentRef == componentRef
+          if (_tool().name == 'sweep' &&
+            _tool().state == 'sweeping' &&
+            _tool().componentRef == componentRef
           ) {
-            const sweepBoxVerts = _toolState().sweepBoxVerts;
+            const sweepBoxVerts = _tool().sweepBoxVerts;
             drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts);
           }
 
@@ -482,25 +482,25 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   const handlersByToolName = {
     'addtri': {
       onMouseDown: (evt) => {
-        const newtri = _toolState().newtri;
+        const newtri = _tool().newtri;
 
-        switch (_toolState().state) {
+        switch (_tool().state) {
           case 'vert2':
             newtri.vertIndeces.push(scene.selectedVerts[0]);
-            _toolState().state = 'vert3';
+            _tool().state = 'vert3';
             break;
           case 'vert3':
             newtri.vertIndeces.push(scene.selectedVerts[0]);
             scene.entities[0].model.triangles.push(newtri);
-            _toolState().newtri = null;
+            _tool().newtri = null;
             onToolSelected('addtri');
             break;
           default: // initial state
-            _toolState().newtri = {
+            _tool().newtri = {
               facesFront: 0,
               vertIndeces: [scene.selectedVerts[0]]
             };
-            _toolState().state = 'vert2';
+            _tool().state = 'vert2';
         }
       },
       onMouseMove: (evt) => {
@@ -530,7 +530,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     'move': {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        Object.assign(_toolState(), {
+        Object.assign(_tool(), {
           movingFrom: [x, y],
           state: 'moving'
         });
@@ -540,9 +540,9 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
         const canvas = canvasRef.current;
         const [w, h] = [canvas.width, canvas.height];
 
-        switch (_toolState().state) {
+        switch (_tool().state) {
           case 'moving':
-            const fromScr = _toolState().movingFrom.slice(); // copy
+            const fromScr = _tool().movingFrom.slice(); // copy
             const toScr = [x, y];
             const model = scene.entities[0].model;
             const selectedVerts = scene.selectedVerts;
@@ -550,13 +550,13 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
             const projectionMatrix = buildProjectionMatrix(w, h, zoom);
 
             moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-            _toolState().movingFrom = [x, y];
+            _tool().movingFrom = [x, y];
             break;
           default:
         }
       },
       onMouseUp: (evt) => {
-        switch (_toolState().state) {
+        switch (_tool().state) {
           case 'moving':
             onToolSelected('move');
         }
@@ -565,13 +565,13 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     'single': {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        Object.assign(_toolState(), {
+        Object.assign(_tool(), {
           movingFrom: [x, y],
           state: 'moving'
         });
       },
       onMouseLeave: (evt) => {
-        if (_toolState().state == 'moving') {
+        if (_tool().state == 'moving') {
           onToolSelected('single');
         }
       },
@@ -582,21 +582,21 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
         const projectionMatrix = buildProjectionMatrix(w, h, zoom);
         const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
 
-        switch (_toolState().state) {
+        switch (_tool().state) {
           case 'moving':
-            const fromScr = _toolState().movingFrom.slice(); // copy
+            const fromScr = _tool().movingFrom.slice(); // copy
             const toScr = [x, y];
             const model = scene.entities[0].model;
             const selectedVerts = scene.selectedVerts;
             const frame = Math.floor(scene.entities[0].frame);
             moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-            _toolState().movingFrom = [x, y];
+            _tool().movingFrom = [x, y];
           default:
             scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
         }
       },
       onMouseUp: (evt) => {
-        if (_toolState().state == 'moving') {
+        if (_tool().state == 'moving') {
           onToolSelected('single');
         }
       }
@@ -604,7 +604,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
     'sweep': {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        Object.assign(_toolState(), {
+        Object.assign(_tool(), {
           state: 'sweeping',
           movingFrom: [x, y],
           sweepBoxVerts: null,
@@ -616,9 +616,9 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
         const canvas = canvasRef.current;
         const [w, h] = [canvas.width, canvas.height];
 
-        switch (_toolState().state) {
+        switch (_tool().state) {
           case 'sweeping':
-            const movingFrom = _toolState().movingFrom;
+            const movingFrom = _tool().movingFrom;
             const projectionMatrix = buildProjectionMatrix(w, h, zoom);
             const selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,
               w, h, camSpaceMatrix, projectionMatrix, scene);
@@ -636,7 +636,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
               y / h * -2 + 1
             ];
 
-            _toolState().sweepBoxVerts = new Float32Array([
+            _tool().sweepBoxVerts = new Float32Array([
               fromNDC[0], fromNDC[1], 0, // x, y, z NDC
               fromNDC[0], toNDC[1], 0,
               toNDC[0], toNDC[1], 0,
@@ -647,7 +647,7 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
         }
       },
       onMouseUp: (evt) => {
-        switch (_toolState().state) {
+        switch (_tool().state) {
           case 'sweeping':
             onToolSelected('sweep');
             break;
@@ -658,11 +658,11 @@ export default function OrthoWireProjection({mv, scene, toolState, onToolSelecte
   }
 
   function toolName() {
-    return _toolState().name;
+    return _tool().name;
   }
 
-  function _toolState() {
-    return toolStateRef.current;
+  function _tool() {
+    return toolRef.current;
   }
 
   // ---

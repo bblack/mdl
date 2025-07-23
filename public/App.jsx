@@ -27,7 +27,7 @@ export default function App({ }) {
   // -- members --
   var lastTickTime;
   const selectedVerts = [];
-  const [toolState, setToolState] = useState({ name: 'single' });
+  const [tool, settool] = useState({ name: 'single' });
   const [scene, _setScene] = useState(
     {
       selectedVerts: selectedVerts,
@@ -102,7 +102,7 @@ export default function App({ }) {
   }
 
   function onToolSelected(toolName) {
-    setToolState({name: toolName})
+    settool({name: toolName})
   }
 
   function onChangeFrame(evt) {
@@ -152,12 +152,12 @@ export default function App({ }) {
 
   return (
     <>
-      <Controls scene={scene} playing={playing} toolState={toolState}
+      <Controls scene={scene} playing={playing} tool={tool}
         onOpen={onOpen} onSave={onSave} onClickPlay={onClickPlay}
         onClickStop={onClickStop} onToolSelected={onToolSelected}
         onChangeFrame={onChangeFrame}
       />
-      <QuadView scene={scene} toolState={toolState}
+      <QuadView scene={scene} tool={tool}
         onToolSelected={onToolSelected}
       />
     </>
