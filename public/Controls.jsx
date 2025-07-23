@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const TOOL_NAMES = ['single', 'sweep', 'move', 'addvert', 'addtri'];
+const TOOL_NAMES = ['single', 'sweep', 'move', 'addvert', 'addtri', 'addcube'];
 
 export default function Controls({
   scene, playing, tool, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected

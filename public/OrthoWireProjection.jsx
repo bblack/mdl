@@ -1,6 +1,8 @@
 import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
 import { useEffect, useRef, useState } from 'react';
 
+const {max, min, abs} = Math;
+
 function createAxisShaderProgram(gl){
     var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(axisvertshader, `
@@ -226,6 +228,15 @@ function setProjectionMatrixUniforms(projectionMatrix, gl, vertShaderProgram, sv
   gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
 }
 
+function worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix) {
+  const [w, h] = [canvas.width, canvas.height];
+  const xNDC = x / canvas.clientWidth * 2 - 1;
+  const yNDC = y / canvas.clientHeight * -2 + 1;
+  const vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
+  const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+  return ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
+}
+
 function ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix){
     var invProjMat = mat4.create();
     mat4.invert(invProjMat, projectionMatrix);
@@ -338,15 +349,15 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
   const canvasRef = useRef(null);
   const toolRef = useRef(null);
   const componentRef = useRef(null);
+  const glRef = useRef(null);
+  const vertShaderProgramRef = useRef(null);
+  const svShaderProgramRef = useRef(null);
+  const axisShaderProgramRef = useRef(null);
+  const shaderProgramRef = useRef(null);
 
   const camSpaceMatrix = mv;
   var zoom = 1/40;
 
-  var gl;
-  var vertShaderProgram;
-  var svShaderProgram;
-  var axisShaderProgram;
-  var shaderProgram;
   var sweepShaderProgram;
   var sweepBoxVertBuf;
 
@@ -355,7 +366,8 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
   useEffect(() => {
       console.log('OrthoWireProjection: useEffect entered');
       const canvas = canvasRef.current;
-      gl = canvas.getContext('webgl');
+
+      const gl = glRef.current = canvas.getContext('webgl');
 
       // create shader programs
 
@@ -364,7 +376,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       var swPosAtt = gl.getAttribLocation(sweepShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(swPosAtt);
 
-      svShaderProgram = createSelectedVertShaderProgram(gl);
+      const svShaderProgram = svShaderProgramRef.current = createSelectedVertShaderProgram(gl);
       gl.useProgram(svShaderProgram);
       var svPosAtt = gl.getAttribLocation(svShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(svPosAtt);
@@ -372,7 +384,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       gl.uniformMatrix4fv(svCamSpaceMatrixU,  false, new Float32Array(camSpaceMatrix));
 
       var axesbuf = bufferAxes(gl);
-      axisShaderProgram = createAxisShaderProgram(gl);
+      const axisShaderProgram = axisShaderProgramRef.current = createAxisShaderProgram(gl);
       gl.useProgram(axisShaderProgram);
       var axisvertexposatt = gl.getAttribLocation(axisShaderProgram, 'aVertexPos');
       gl.enableVertexAttribArray(axisvertexposatt);
@@ -381,7 +393,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       var axisCamMatrixU = gl.getUniformLocation(axisShaderProgram, 'camSpaceMatrix');
       gl.uniformMatrix4fv(axisCamMatrixU, false, new Float32Array(camSpaceMatrix));
 
-      vertShaderProgram = createVertShaderProgram(gl);
+      const vertShaderProgram = vertShaderProgramRef.current = createVertShaderProgram(gl);
       gl.useProgram(vertShaderProgram);
       var vertShader_aVertPos = gl.getAttribLocation(vertShaderProgram, 'aVertPos');
       gl.enableVertexAttribArray(vertShader_aVertPos);
@@ -389,7 +401,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       gl.uniformMatrix4fv(vertCamSpaceMatrixU, false, camSpaceMatrix);
       var vertBuf = gl.createBuffer();
 
-      shaderProgram = createModelShaderProgram(gl);
+      const shaderProgram = shaderProgramRef.current = createModelShaderProgram(gl);
       gl.useProgram(shaderProgram);
       var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
       gl.enableVertexAttribArray(vertexPositionAttribute);
@@ -477,9 +489,113 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
       render();
 
-  }, [true]); // dependency on constant "true" so useEffect runs only on first render
+  }, []);
 
   const handlersByToolName = {
+    'addcube': {
+      onMouseDown: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        // create unit cube from 0,0,0 to 1,1,1
+        // 8 verts and 12 tris
+        // set cube verts on tool
+        // set start pos on tool
+        const verts = [
+          [0, 0, 0],
+          [0, 1, 0],
+          [1, 1, 0],
+          [1, 0, 0],
+          [0, 0, 1],
+          [0, 1, 1],
+          [1, 1, 1],
+          [1, 0, 1],
+        ];
+        const tris = [
+          [2, 1, 0],
+          [0, 3, 2],
+          [4, 5, 6],
+          [6, 7, 4],
+          [1, 5, 4],
+          [4, 0, 1],
+          [6, 2, 3],
+          [3, 7, 6],
+          [3, 0, 4],
+          [4, 7, 3],
+          [6, 5, 1],
+          [1, 2, 6]
+          // TODO: rest
+        ];
+        const model = scene.entities[0].model;
+
+        const newVertIndeces = verts.map(v => model.addVert(v));
+        // TODO create Model#addtri
+        tris.forEach(tri => {
+          tri = tri.map(vertInd => model.vertexCount() + vertInd - verts.length);
+          model.triangles.push({ facesFront: 0, vertIndeces: tri });
+        });
+
+        console.log('added verts ' + newVertIndeces.join(', '));
+
+        Object.assign(_tool(), {
+          state: 'scaling',
+          cubeVerts: verts,
+          cubeTris: tris,
+          cubePos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
+          cubeScale: 0,
+          modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i)
+        });
+      },
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        // scale the unit cube stored on the tool by distance from start pos to current pos
+        //
+        const model = scene.entities[0].model;
+
+        if (_tool().state == 'scaling') {
+          const canvas = canvasRef.current;
+          const modelVertIndeces = _tool().modelVertIndeces;
+          const cubeVerts = _tool().cubeVerts;
+          const cubePos = _tool().cubePos;
+
+          const cursorWorldPos = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
+          const d = [
+            cursorWorldPos[0] - cubePos[0],
+            cursorWorldPos[1] - cubePos[1]
+          ];
+          const scale = abs(d[0]) > abs(d[1]) ? d[0] : d[1];
+          // TODO: 2d scale for non-cube rectanguloids. and for proper direction when we're in quadrants where coords have different signs...
+
+          const newCubeVertCoords = modelVertIndeces.map((vertIndex, i) => {
+            const cubeVert = cubeVerts[i];
+            return [
+              cubeVert[0] * scale + cubePos[0],
+              cubeVert[1] * scale + cubePos[1],
+              cubeVert[2] * scale + cubePos[2]
+            ];
+          });
+
+          model.frames.forEach(f => {
+            const cubeVerts = _tool().cubeVerts;
+
+            modelVertIndeces.forEach((vertIndex, i) => {
+              console.log(`setting vert ${vertIndex} to position ${newCubeVertCoords[i].join(', ')}`);
+              f.simpleFrame.verts[vertIndex] = {
+                x: newCubeVertCoords[i][0],
+                y: newCubeVertCoords[i][1],
+                z: newCubeVertCoords[i][2]
+              }
+            });
+          });
+
+
+        }
+      },
+      onMouseUp: (evt) => {
+        // TODO: select them when done
+        // TODO no backfaces
+        onToolSelected('addcube'); // clear all other tool state
+      }
+    },
     'addtri': {
       onMouseDown: (evt) => {
         const newtri = _tool().newtri;
@@ -518,12 +634,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         const canvas = canvasRef.current;
-        const [w, h] = [canvas.width, canvas.height];
-        var xNDC = x / canvas.clientWidth * 2 - 1;
-        var yNDC = y / canvas.clientHeight * -2 + 1;
-        var vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
-        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        var vWorld = ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
+        const vWorld = worldPosFromCanvasPos(x, y, canvas);
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
       }
     },
@@ -581,6 +692,10 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
         const [w, h] = [canvas.width, canvas.height];
         const projectionMatrix = buildProjectionMatrix(w, h, zoom);
         const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
+
+        const ent = scene.entities[0];
+
+        console.log(`selecting vert ${closestVertIndex} with position ${JSON.stringify(ent.model.frames[Math.floor(ent.frame)].simpleFrame.verts[closestVertIndex])}`)
 
         switch (_tool().state) {
           case 'moving':
@@ -693,6 +808,11 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
   function onWheel(evt) {
     const canvas = canvasRef.current;
+    const gl = glRef.current;
+    const vertShaderProgram = vertShaderProgramRef.current;
+    const svShaderProgram = svShaderProgramRef.current;
+    const axisShaderProgram = axisShaderProgramRef.current;
+    const shaderProgram = shaderProgramRef.current;
 
     zoom *= Math.pow(1.1, -evt.nativeEvent.deltaY / 10);
     // this is overkill. all we want is to compute and set the projection matrix, and let that get put in the relevant uniforms in the shader programs. but that's inlined in this fn for now, so:

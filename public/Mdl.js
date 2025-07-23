@@ -246,6 +246,11 @@ Mdl.prototype.addVert = function(x, y, z){
     this.frames.forEach((f) => {
         f.simpleFrame.verts.push({x: x, y: y, z: z});
     });
+    // return index of new vert:
+    return this.frames[0].simpleFrame.verts.length - 1;
+}
+Mdl.prototype.vertexCount = function() {
+  return this.frames[0].simpleFrame.verts.length;
 }
 
 export default Mdl;
