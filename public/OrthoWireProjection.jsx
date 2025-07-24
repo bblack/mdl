@@ -203,10 +203,15 @@ function drawAxes(gl, shaderProgram, buf, vPosAtt, vColorAtt){
 }
 function drawSelectedVerts(gl, shaderProgram, buf, vertPosAtt, selectedVerts){
     const numPoints = selectedVerts.length;
+
     gl.useProgram(shaderProgram);
+
+    // ELEMENT_ARRAY_BUFFER means that these buffers contain INDEXES to the elements of an array in another buffer, the buffer bound to ARRAY_BUFFER.
+    // therefore this function implicitly depends on the currently bound ARRAY_BUFFER buffer containing vertex positions.
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(selectedVerts), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertPosAtt, 3, gl.FLOAT, false, 0, 0);
+
     gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_SHORT, 0);
 }
 function drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts){
@@ -524,10 +529,11 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
               gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
               gl.vertexAttribPointer(vertShader_aVertPos, 3, gl.FLOAT, false, 0, 0);
               gl.drawArrays(gl.POINTS, 0, vertices.length / 3);
+
+              drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
+                  svPosAtt, selectedVerts);
           }
 
-          drawSelectedVerts(gl, svShaderProgram, selectedVertIndexBuf,
-              svPosAtt, selectedVerts);
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
           if (_tool().name == 'sweep' &&
