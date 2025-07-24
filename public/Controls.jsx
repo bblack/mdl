@@ -5,11 +5,9 @@ const TOOL_NAMES = ['single', 'sweep', 'move', 'addvert', 'addtri', 'addcube'];
 export default function Controls({
   scene, playing, tool, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected
 }) {
-  if (scene.entities.length == 0) return null;
-
-  const ent = scene.entities[0];
-  const model = ent.model;
-  const [frame, setFrame] = useState(Math.floor(ent.frame));
+  const ent = !scene.entities.length ? null : scene.entities[0];
+  const model = !ent ? null : ent.model;
+  const [frame, setFrame] = useState(0);
   const toolButtons = TOOL_NAMES.map((t) =>
     <button type='button'
       key={t}
@@ -44,19 +42,19 @@ export default function Controls({
         <tbody>
           <tr>
               <td>Vertices</td>
-              <td>{ model.texCoords.length }</td>
+              <td>{ !model ? '-' : model.texCoords.length }</td>
           </tr>
           <tr>
               <td>Faces</td>
-              <td>{ model.triangles.length }</td>
+              <td>{ !model ? '-' : model.triangles.length }</td>
           </tr>
           <tr>
               <td>Frames</td>
-              <td>{ model.frames.length }</td>
+              <td>{ !model ? '-' : model.frames.length }</td>
           </tr>
           <tr>
               <td>Skins</td>
-              <td>{ model.skins.length }</td>
+              <td>{ !model ? '-' : model.skins.length }</td>
           </tr>
         </tbody>
       </table>
@@ -64,13 +62,15 @@ export default function Controls({
 
       <h3>Animation</h3>
 
-      <input type='range' min='0' max={model.frames.length - 1} value={ent.frame} onChange={onChangeFrame} />
+      <input type='range' min='0' max={!model ? 0 : model.frames.length - 1}
+        value={!ent ? 0 : ent.frame} onChange={onChangeFrame}
+      />
 
       <button onClick={playing ? onClickStop : onClickPlay}>
         { playing ? 'stop' : 'play' }
       </button>
 
-      { model.frames[frame].simpleFrame.name }
+      { !model ? null : model.frames[frame].simpleFrame.name }
       <hr/>
 
       <h3>Skin</h3>
