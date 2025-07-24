@@ -3,6 +3,33 @@ import { useEffect, useRef, useState } from 'react';
 
 const {max, min, abs} = Math;
 
+const UNIT_CUBE = {
+  verts: [
+    [0, 0, 0],
+    [0, 1, 0],
+    [1, 1, 0],
+    [1, 0, 0],
+    [0, 0, 1],
+    [0, 1, 1],
+    [1, 1, 1],
+    [1, 0, 1],
+  ],
+  tris: [
+    [2, 1, 0],
+    [0, 3, 2],
+    [5, 6, 7],
+    [7, 4, 5],
+    [1, 5, 4],
+    [4, 0, 1],
+    [6, 2, 3],
+    [3, 7, 6],
+    [3, 0, 4],
+    [4, 7, 3],
+    [6, 5, 1],
+    [1, 2, 6]
+  ]
+}
+
 function createAxisShaderProgram(gl){
     var axisvertshader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(axisvertshader, `
@@ -226,6 +253,28 @@ function setProjectionMatrixUniforms(projectionMatrix, gl, vertShaderProgram, sv
   gl.useProgram(shaderProgram);
   const matrixUniform = gl.getUniformLocation(shaderProgram, 'matrix');
   gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
+}
+
+function computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camSpaceMatrix) {
+  const cursorWorldPos = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
+  const basisXEndpoint = worldPosFromCanvasPos(canvasStartPos[0], y, canvas, zoom, camSpaceMatrix);
+  const basisX = vec3.sub(vec3.create(), cursorWorldPos, basisXEndpoint);
+  const basisYEndpoint = worldPosFromCanvasPos(x, canvasStartPos[1], canvas, zoom, camSpaceMatrix);
+  const basisY = vec3.sub(vec3.create(), cursorWorldPos, basisYEndpoint);
+  const basisZ = vec3.cross(vec3.create(), basisX, basisY);
+
+  vec3.normalize(basisZ, basisZ);
+  vec3.scale(basisZ, basisZ, max(vec3.len(basisX), vec3.len(basisY)));
+
+  const basis = mat3.fromValues(
+    basisX[0], basisX[1], basisX[2],
+    basisY[0], basisY[1], basisY[2],
+    basisZ[0], basisZ[1], basisZ[2]
+  );
+
+  console.log(`cube basis: (${basisX.join(', ')}); (${basisY.join(', ')}); (${basisZ.join(', ')})`);
+
+  return basis;
 }
 
 function worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix) {
@@ -496,31 +545,8 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         const canvas = canvasRef.current;
-        const verts = [
-          [0, 0, 0],
-          [0, 1, 0],
-          [1, 1, 0],
-          [1, 0, 0],
-          [0, 0, 1],
-          [0, 1, 1],
-          [1, 1, 1],
-          [1, 0, 1],
-        ];
-        const tris = [
-          [2, 1, 0],
-          [0, 3, 2],
-          [5, 6, 7],
-          [7, 4, 5],
-          [1, 5, 4],
-          [4, 0, 1],
-          [6, 2, 3],
-          [3, 7, 6],
-          [3, 0, 4],
-          [4, 7, 3],
-          [6, 5, 1],
-          [1, 2, 6]
-        ];
         const model = scene.entities[0].model;
+        const { verts, tris } = UNIT_CUBE;
         const newVertIndeces = verts.map(v => model.addVert(v));
         // TODO create Model#addtri
         tris.forEach(tri => {
@@ -540,31 +566,13 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       },
       onMouseMove: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        // scale the unit cube stored on the tool by distance from start pos to current pos
-        //
         const model = scene.entities[0].model;
 
         if (_tool().state == 'scaling') {
           const canvas = canvasRef.current;
           const { modelVertIndeces, cubeVerts, cubePos, canvasStartPos } = _tool();
-          const cursorWorldPos = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
 
-          const basisXEndpoint = worldPosFromCanvasPos(canvasStartPos[0], y, canvas, zoom, camSpaceMatrix);
-          const basisX = vec3.sub(vec3.create(), cursorWorldPos, basisXEndpoint);
-          const basisYEndpoint = worldPosFromCanvasPos(x, canvasStartPos[1], canvas, zoom, camSpaceMatrix);
-          const basisY = vec3.sub(vec3.create(), cursorWorldPos, basisYEndpoint);
-          const basisZ = vec3.cross(vec3.create(), basisX, basisY);
-
-          vec3.normalize(basisZ, basisZ);
-          vec3.scale(basisZ, basisZ, max(vec3.len(basisX), vec3.len(basisY)));
-
-          console.log(`cube basis: (${basisX.join(', ')}); (${basisY.join(', ')}); (${basisZ.join(', ')})`)
-
-          const basis = mat3.fromValues(
-            basisX[0], basisX[1], basisX[2],
-            basisY[0], basisY[1], basisY[2],
-            basisZ[0], basisZ[1], basisZ[2]
-          );
+          const basis = computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camSpaceMatrix);
 
           const newCubeVertCoords = modelVertIndeces.map((vertIndex, i) => {
             const cubeVert = vec3.fromValues.apply(vec3, cubeVerts[i]);
