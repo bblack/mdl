@@ -255,6 +255,11 @@ function setProjectionMatrixUniforms(projectionMatrix, gl, vertShaderProgram, sv
   gl.uniformMatrix4fv(matrixUniform, false, new Float32Array(projectionMatrix));
 }
 
+// given two 2D positions in the canvas space, produces a mat3 representing 3 perpendicular "basis" vectors in world space.
+// typically given the "drag start" and "drag end" positions, the basis vectors are:
+// x: the x component of the drag, projected into world space
+// y: the y component of the drag, projected into world space
+// z: cross product of the first two, scaled to length equal to the higher of the first two basis vectors
 function computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camSpaceMatrix) {
   const cursorWorldPos = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
   const basisXEndpoint = worldPosFromCanvasPos(canvasStartPos[0], y, canvas, zoom, camSpaceMatrix);
@@ -559,8 +564,8 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
         Object.assign(_tool(), {
           state: 'scaling',
           canvasStartPos: [x, y],
-          cubeVerts: verts,
-          cubePos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
+          geomVerts: verts, // geometry prototype, e.g. unit cube with origin (0,0,0)
+          geomPos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
           modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i)
         });
       },
@@ -570,35 +575,33 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
         if (_tool().state == 'scaling') {
           const canvas = canvasRef.current;
-          const { modelVertIndeces, cubeVerts, cubePos, canvasStartPos } = _tool();
+          const { modelVertIndeces, geomVerts, geomPos, canvasStartPos } = _tool();
 
           const basis = computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camSpaceMatrix);
 
-          const newCubeVertCoords = modelVertIndeces.map((vertIndex, i) => {
-            const cubeVert = vec3.fromValues.apply(vec3, cubeVerts[i]);
+          const newGeomVertCoords = modelVertIndeces.map((vertIndex, i) => {
+            const geomVert = vec3.fromValues.apply(vec3, geomVerts[i]);
             const outVert = vec3.create();
 
-            vec3.transformMat3(outVert, cubeVert, basis);
-            vec3.add(outVert, outVert, vec3.fromValues(cubePos[0], cubePos[1], cubePos[2]));
+            vec3.transformMat3(outVert, geomVert, basis);
+            vec3.add(outVert, outVert, vec3.fromValues.apply(vec3, geomPos));
 
-            console.log(`cube vert ${i}: (${cubeVert.join(', ')}) -> (${outVert.join(', ')})`)
+            // console.log(`geom vert ${i}: (${geomVert.join(', ')}) -> (${outVert.join(', ')})`)
 
             return outVert;
           });
 
           model.frames.forEach(f => {
-            const cubeVerts = _tool().cubeVerts;
+            const geomVerts = _tool().geomVerts;
 
             modelVertIndeces.forEach((vertIndex, i) => {
               f.simpleFrame.verts[vertIndex] = {
-                x: newCubeVertCoords[i][0],
-                y: newCubeVertCoords[i][1],
-                z: newCubeVertCoords[i][2]
+                x: newGeomVertCoords[i][0],
+                y: newGeomVertCoords[i][1],
+                z: newGeomVertCoords[i][2]
               }
             });
           });
-
-
         }
       },
       onMouseUp: (evt) => {
