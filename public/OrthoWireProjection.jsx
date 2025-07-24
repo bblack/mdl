@@ -40,7 +40,7 @@ function createAxisShaderProgram(gl){
         varying lowp vec4 vcolor;
         void main(void) {
             gl_Position = matrix * camSpaceMatrix * vec4(aVertexPos, 1.0);
-            vcolor = vec4(aVertexColor, 0.0);
+            vcolor = vec4(aVertexColor, 1.0);
         }
     `);
     gl.compileShader(axisvertshader);
