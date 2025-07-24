@@ -1,4 +1,4 @@
-import { mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
+import { mat3, mat4, vec2, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
 import { useEffect, useRef, useState } from 'react';
 
 const {max, min, abs} = Math;
@@ -496,10 +496,6 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         const canvas = canvasRef.current;
-        // create unit cube from 0,0,0 to 1,1,1
-        // 8 verts and 12 tris
-        // set cube verts on tool
-        // set start pos on tool
         const verts = [
           [0, 0, 0],
           [0, 1, 0],
@@ -523,10 +519,8 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
           [4, 7, 3],
           [6, 5, 1],
           [1, 2, 6]
-          // TODO: rest
         ];
         const model = scene.entities[0].model;
-
         const newVertIndeces = verts.map(v => model.addVert(v));
         // TODO create Model#addtri
         tris.forEach(tri => {
@@ -538,10 +532,9 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
         Object.assign(_tool(), {
           state: 'scaling',
+          canvasStartPos: [x, y],
           cubeVerts: verts,
-          cubeTris: tris,
           cubePos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
-          cubeScale: 0,
           modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i)
         });
       },
@@ -553,32 +546,42 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
         if (_tool().state == 'scaling') {
           const canvas = canvasRef.current;
-          const modelVertIndeces = _tool().modelVertIndeces;
-          const cubeVerts = _tool().cubeVerts;
-          const cubePos = _tool().cubePos;
-
+          const { modelVertIndeces, cubeVerts, cubePos, canvasStartPos } = _tool();
           const cursorWorldPos = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
-          const d = [
-            cursorWorldPos[0] - cubePos[0],
-            cursorWorldPos[1] - cubePos[1]
-          ];
-          const scale = abs(d[0]) > abs(d[1]) ? d[0] : d[1];
-          // TODO: 2d scale for non-cube rectanguloids. and for proper direction when we're in quadrants where coords have different signs...
+
+          const basisXEndpoint = worldPosFromCanvasPos(canvasStartPos[0], y, canvas, zoom, camSpaceMatrix);
+          const basisX = vec3.sub(vec3.create(), cursorWorldPos, basisXEndpoint);
+          const basisYEndpoint = worldPosFromCanvasPos(x, canvasStartPos[1], canvas, zoom, camSpaceMatrix);
+          const basisY = vec3.sub(vec3.create(), cursorWorldPos, basisYEndpoint);
+          const basisZ = vec3.cross(vec3.create(), basisX, basisY);
+
+          vec3.normalize(basisZ, basisZ);
+          vec3.scale(basisZ, basisZ, max(vec3.len(basisX), vec3.len(basisY)));
+
+          console.log(`cube basis: (${basisX.join(', ')}); (${basisY.join(', ')}); (${basisZ.join(', ')})`)
+
+          const basis = mat3.fromValues(
+            basisX[0], basisX[1], basisX[2],
+            basisY[0], basisY[1], basisY[2],
+            basisZ[0], basisZ[1], basisZ[2]
+          );
 
           const newCubeVertCoords = modelVertIndeces.map((vertIndex, i) => {
-            const cubeVert = cubeVerts[i];
-            return [
-              cubeVert[0] * scale + cubePos[0],
-              cubeVert[1] * scale + cubePos[1],
-              cubeVert[2] * scale + cubePos[2]
-            ];
+            const cubeVert = vec3.fromValues.apply(vec3, cubeVerts[i]);
+            const outVert = vec3.create();
+
+            vec3.transformMat3(outVert, cubeVert, basis);
+            vec3.add(outVert, outVert, vec3.fromValues(cubePos[0], cubePos[1], cubePos[2]));
+
+            console.log(`cube vert ${i}: (${cubeVert.join(', ')}) -> (${outVert.join(', ')})`)
+
+            return outVert;
           });
 
           model.frames.forEach(f => {
             const cubeVerts = _tool().cubeVerts;
 
             modelVertIndeces.forEach((vertIndex, i) => {
-              console.log(`setting vert ${vertIndex} to position ${newCubeVertCoords[i].join(', ')}`);
               f.simpleFrame.verts[vertIndex] = {
                 x: newCubeVertCoords[i][0],
                 y: newCubeVertCoords[i][1],
@@ -591,8 +594,9 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
         }
       },
       onMouseUp: (evt) => {
-        // TODO: select them when done
-        // TODO no backfaces
+        // scene.selectedVerts = _tool().modelVertIndeces;
+        // 1. WHY DOES THE ABOVE MEAN THAT SUBSEQUENT DRAWS REFLECT THE OLD SELECTION FOREVER?
+        scene.selectedVerts.splice(0, scene.selectedVerts.length, ..._tool().modelVertIndeces)
         onToolSelected('addcube'); // clear all other tool state
       }
     },
@@ -634,7 +638,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
         const canvas = canvasRef.current;
-        const vWorld = worldPosFromCanvasPos(x, y, canvas);
+        const vWorld = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
       }
     },
@@ -695,7 +699,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
         const ent = scene.entities[0];
 
-        console.log(`selecting vert ${closestVertIndex} with position ${JSON.stringify(ent.model.frames[Math.floor(ent.frame)].simpleFrame.verts[closestVertIndex])}`)
+        // console.log(`selecting vert ${closestVertIndex} with position ${JSON.stringify(ent.model.frames[Math.floor(ent.frame)].simpleFrame.verts[closestVertIndex])}`)
 
         switch (_tool().state) {
           case 'moving':
