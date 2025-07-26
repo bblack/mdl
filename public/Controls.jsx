@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import Skin from './Skin.jsx';
 
 const TOOL_NAMES = ['single', 'sweep', 'move', 'addvert', 'addtri', 'addcube'];
 
@@ -8,6 +10,7 @@ export default function Controls({
   const ent = !scene.entities.length ? null : scene.entities[0];
   const model = !ent ? null : ent.model;
   const [frame, setFrame] = useState(0);
+  const [showSkinModal, setShowSkinModal] = useState(false);
   const toolButtons = TOOL_NAMES.map((t) =>
     <button type='button'
       key={t}
@@ -17,6 +20,7 @@ export default function Controls({
       {t}
     </button>
   );
+  const entity = () => scene.entities[0];
 
   useEffect(() => {
     if (!playing) return;
@@ -26,7 +30,9 @@ export default function Controls({
     return () => clearInterval(id);
   });
 
-  const entity = () => scene.entities[0];
+  function onClickViewSkin() {
+    setShowSkinModal(true);
+  }
 
   return (
     <div id='controls'>
@@ -74,13 +80,15 @@ export default function Controls({
       <hr/>
 
       <h3>Skin</h3>
-      View skin...
+        <button onClick={onClickViewSkin}>View skin...</button>
       <hr/>
       <h3>Tools</h3>
       <div>
         {toolButtons}
       </div>
       <hr/>
+
+      {showSkinModal && createPortal(<Skin scene={scene} />, document.body)}
     </div>
   )
 }
