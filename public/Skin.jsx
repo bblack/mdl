@@ -78,6 +78,10 @@ function drawTexMapMesh(model, ctx) {
     const { s, t } = texCoord;
 
     ctx.fillRect(s - 1, t - 1, 3, 3);
+
+    if (texCoord.onSeam) {
+      ctx.fillRect(s + model.skinWidth / 2 - 1, t - 1, 3, 3);
+    }
   });
 
   model.triangles.forEach(tri => {
