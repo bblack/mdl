@@ -96,6 +96,23 @@
             .palette>canvas {
                 display: inline-block;
             }
+
+            .dialog .head {
+                display: flex;
+                margin-bottom: 0.5em;
+            }
+
+            .dialog .head>.title {
+                flex: 1 1 auto;
+            }
+
+            .dialog .head>.close {
+                flex: 0 0 auto;
+            }
+
+            .dialog .head>.close::after {
+                content: '✖';
+            }
         </style>
     </head>
     <body>

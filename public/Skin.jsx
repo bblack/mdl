@@ -32,14 +32,18 @@ export default function Skin({ scene }) {
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    ctx.scale(2, 2);
     ctx.putImageData(imageData, 0, 0);
+
+    drawTexMapMesh(model, ctx);
   });
 
   return (
     <>
-      <div className='palette' style={style}>
-        <div className='title'>skin</div>
+      <div className='dialog palette' style={style}>
+        <div className='head'>
+          <div className='title'>skin</div>
+          <div className='close' onClick={close}></div>
+        </div>
         {paletteTable(palette)}
         <canvas className='skin' ref={canvasRef}
           width={width} height={height}
@@ -64,4 +68,29 @@ function paletteTable(palette) {
   }
 
   return <table><tbody>{rows}</tbody></table>;
+}
+
+function drawTexMapMesh(model, ctx) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+
+  model.texCoords.forEach(texCoord => {
+    const { s, t } = texCoord;
+
+    ctx.fillRect(s - 1, t - 1, 3, 3);
+  });
+
+  model.triangles.forEach(tri => {
+    ctx.beginPath();
+
+    const st0 = model.texCoords[tri.vertIndeces[0]];
+    const st1 = model.texCoords[tri.vertIndeces[1]];
+    const st2 = model.texCoords[tri.vertIndeces[2]];
+
+    ctx.moveTo(st0.s + (!tri.facesFront && st0.onSeam ? (model.skinWidth / 2) : 0), st0.t);
+    ctx.lineTo(st1.s + (!tri.facesFront && st1.onSeam ? (model.skinWidth / 2) : 0), st1.t);
+    ctx.lineTo(st2.s + (!tri.facesFront && st2.onSeam ? (model.skinWidth / 2) : 0), st2.t);
+    ctx.lineTo(st0.s + (!tri.facesFront && st0.onSeam ? (model.skinWidth / 2) : 0), st0.t);
+    ctx.stroke();
+  })
 }
