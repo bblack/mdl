@@ -93,6 +93,7 @@ projection {
 
 .dialog .head>.close {
     flex: 0 0 auto;
+    cursor: pointer;
 }
 
 .dialog .head>.close::after {

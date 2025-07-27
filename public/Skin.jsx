@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function Skin({ scene, onClose }) {
   const canvasRef = useRef(null);
-  const style = {
+  const [style, setStyle] = useState({
     position: 'absolute',
     // height: '100px',
     // width: '100px',
@@ -12,7 +12,7 @@ export default function Skin({ scene, onClose }) {
     borderRadius: '4px',
     boxShadow: '0 2px 8px black',
     padding: '1em'
-  }
+  });
   const palette = scene.palette;
   const model = scene.entities[0].model;
   const width = model.skinWidth;
@@ -37,9 +37,33 @@ export default function Skin({ scene, onClose }) {
     drawTexMapMesh(model, ctx);
   });
 
+  function startDrag(evt) {
+    // TODO: disable selecting text while dragging
+    const offsetX = evt.clientX - parseInt(style.left);
+    const offsetY = evt.clientY - parseInt(style.top);
+    const drag = (moveEvt) => {
+      const left = moveEvt.clientX - offsetX;
+      const top = moveEvt.clientY - offsetY;
+      const newStyle = Object.assign({}, style);
+
+      Object.assign(newStyle, {top: top, left: left})
+
+      setStyle(newStyle);
+    }
+    const stopDrag = () => {
+      window.removeEventListener('mousemove', drag);
+      window.removeEventListener('mouseup', stopDrag);
+      window.removeEventListener('mousedown', stopDrag);
+    }
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('mouseup', stopDrag);
+    // window.addEventListener('mousedown', stopDrag);
+  }
+
   return (
     <>
-      <div className='dialog palette' style={style}>
+      <div className='dialog palette' style={style}
+        onMouseDown={startDrag}>
         <div className='head'>
           <div className='title'>skin</div>
           <div className='close' onClick={onClose}></div>
