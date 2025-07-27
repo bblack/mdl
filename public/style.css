@@ -1,0 +1,100 @@
+body {
+    margin: 0;
+    padding: 0;
+    color: #e0e0e0;
+    font-family: inconsolata, monospace;
+}
+
+canvas {
+  /* background-color: hsla(0, 0%, 0%, 10%); */
+}
+
+.pane {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    background-image: -webkit-linear-gradient(45deg, #222, #444);
+}
+
+.pane.n {
+    top: 0;
+}
+
+.pane.s {
+    bottom: 0;
+}
+
+.pane.e {
+    right: 0;
+}
+
+.pane.w {
+    left: 0;
+}
+
+projection {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+}
+
+#controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 20%;
+
+    background-color: #181818;
+    overflow-y: auto;
+}
+
+#controls table {
+    width: 100%;
+}
+
+#controls hr {
+    border: none;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#quadview {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 80%;
+}
+
+.palette>table {
+    border-collapse: 'collapse';
+    border-spacing: 0;
+    display: inline-block;
+}
+
+.palette>table td {
+    width: 12px;
+    height: 12px;
+}
+
+.palette>canvas {
+    display: inline-block;
+}
+
+.dialog .head {
+    display: flex;
+    margin-bottom: 0.5em;
+}
+
+.dialog .head>.title {
+    flex: 1 1 auto;
+}
+
+.dialog .head>.close {
+    flex: 0 0 auto;
+}
+
+.dialog .head>.close::after {
+    content: '✖';
+}
