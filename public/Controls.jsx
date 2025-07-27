@@ -88,7 +88,9 @@ export default function Controls({
       </div>
       <hr/>
 
-      {showSkinModal && createPortal(<Skin scene={scene} />, document.body)}
+      {showSkinModal &&
+        createPortal(<Skin scene={scene} onClose={() => setShowSkinModal(false)} />, document.body)
+      }
     </div>
   )
 }

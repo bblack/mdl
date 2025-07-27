@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function Skin({ scene }) {
+export default function Skin({ scene, onClose }) {
   const canvasRef = useRef(null);
   const style = {
     position: 'absolute',
@@ -42,7 +42,7 @@ export default function Skin({ scene }) {
       <div className='dialog palette' style={style}>
         <div className='head'>
           <div className='title'>skin</div>
-          <div className='close' onClick={close}></div>
+          <div className='close' onClick={onClose}></div>
         </div>
         {paletteTable(palette)}
         <canvas className='skin' ref={canvasRef}
