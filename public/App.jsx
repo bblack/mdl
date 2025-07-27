@@ -105,9 +105,7 @@ export default function App({ }) {
     settool({name: toolName})
   }
 
-  function onChangeFrame(evt) {
-    const newFrame = evt.target.value;
-
+  function onChangeFrame(newFrame) {
     scene.entities.forEach((ent) => ent.frame = newFrame)
   }
 

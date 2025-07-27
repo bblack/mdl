@@ -34,6 +34,18 @@ export default function Controls({
     setShowSkinModal(true);
   }
 
+  function _onChangeFrame(evt) {
+    const newFrame = parseInt(evt.target.value);
+
+    if (isNaN(newFrame)) {
+      console.warn('NaN: ' + newFrame);
+      return;
+    }
+
+    setFrame(newFrame);
+    onChangeFrame(newFrame);
+  }
+
   return (
     <div id='controls'>
       <div>
@@ -69,7 +81,7 @@ export default function Controls({
       <h3>Animation</h3>
 
       <input type='range' min='0' max={!model ? 0 : model.frames.length - 1}
-        value={!ent ? 0 : ent.frame} onChange={onChangeFrame}
+        value={frame} onChange={_onChangeFrame}
       />
 
       <button onClick={playing ? onClickStop : onClickPlay}>
