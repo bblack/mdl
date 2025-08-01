@@ -267,7 +267,12 @@ export default function PerspectiveProjection({mv, scene}) {
     loadModelTexture(gl, tex, model.skinWidth, model.skinHeight, pixels);
 
     render();
-  }, [canvasRef.current]); // dependency on constant "true" so useEffect runs only on first render
+  }, [
+    // if we have a new canvas, we'd have a new gl context etc:
+    canvasRef.current,
+    // a new scene may have a new texture, and since we only load that into GL in the above function:
+    scene
+  ]);
 
   if (scene.entities.length == 0) return null;
 

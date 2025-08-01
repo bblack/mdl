@@ -74,15 +74,16 @@ export default function App({ }) {
   function onOpen(file) {
     var fr = new FileReader();
     fr.onloadend = (a,b,c) => {
-        if (fr.readyState != FileReader.DONE) throw 'status bad';
-        var buf = fr.result;
-        const mdl = Mdl.fromBuffer(buf);
+      if (fr.readyState != FileReader.DONE) throw 'status bad';
+      var buf = fr.result;
+      const mdl = Mdl.fromBuffer(buf);
 
-        scene.entities[0].model = mdl;
+      scene.entities[0].model = mdl;
 
-        const newScene = Object.assign({}, scene);
+      const newScene = {};
+      Object.assign(newScene, scene);
 
-        setScene(scene);
+      setScene(newScene);
     }
     fr.readAsArrayBuffer(file);
   }
