@@ -5,48 +5,28 @@ body {
     font-family: inconsolata, monospace;
 }
 
-canvas {
-  /* background-color: hsla(0, 0%, 0%, 10%); */
+#root {
+    display: flex;
+    width: 100%;
+    height: 100%;
 }
 
 .pane {
-    position: absolute;
+    display: inline-block;
     width: 50%;
     height: 50%;
+    /* overflow: hidden is important to prevent window resizes resulting in the occasional single pane sizing itself strangely and leaving some whitespace: since each component watches for window.resize events and resizes the canvas according to its parent size, because that WINDOW resize event MAY be issued before this ELEMENT is painted and its new size set, you might end up with a pane that's still too wide, resulting in a new canvas that's bigger than it should be, resulting in the next pane to be sized weirdly... */
+    overflow: hidden;
     background-image: -webkit-linear-gradient(45deg, #222, #444);
 }
 
-.pane.n {
-    top: 0;
-}
-
-.pane.s {
-    bottom: 0;
-}
-
-.pane.e {
-    right: 0;
-}
-
-.pane.w {
-    left: 0;
-}
-
-projection {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-}
-
 #controls {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 20%;
-
+    flex: 0 1 auto;
+    overflow: hidden;
     background-color: #181818;
     overflow-y: auto;
+    padding: 0.5em;
+    min-width: 200px;
 }
 
 #controls table {
@@ -60,11 +40,7 @@ projection {
 }
 
 #quadview {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 80%;
+    flex: 1 1 auto;
 }
 
 .palette>table {

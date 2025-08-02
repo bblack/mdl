@@ -173,7 +173,11 @@ export default function PerspectiveProjection({mv, scene, activeSkin}) {
     const gl = canvas.getContext('webgl');
 
     window.addEventListener('resize', () => {
-      sizeCanvasToContainer(canvasRef.current, gl, axisShaderProgram, shaderProgram)
+      requestAnimationFrame(() =>
+        sizeCanvasToContainer(
+          canvas, gl, axisShaderProgram, shaderProgram
+        )
+      );
     });
 
     gl.enable(gl.DEPTH_TEST);
