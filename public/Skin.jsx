@@ -13,14 +13,21 @@ export default function Skin({ scene, onClose }) {
     boxShadow: '0 2px 8px black',
     padding: '1em'
   });
+  const [activeSkin, setActiveSkin] = useState(0);
+
   const palette = scene.palette;
   const model = scene.entities[0].model;
   const width = model.skinWidth;
   const height = model.skinHeight;
 
+  // if (activeSkin != 0) {
+  //   setActiveSkin(0);
+  // }
+
   useEffect(() => {
+    debugger;
     const pixelBytes = [];
-    const skin = model.skins[0];
+    const skin = model.skins[activeSkin];
 
     new Uint8Array(skin.data.data).forEach((color) => {
       const rgba = palette[color].concat(0xff); // alpha opaque
@@ -35,7 +42,7 @@ export default function Skin({ scene, onClose }) {
     ctx.putImageData(imageData, 0, 0);
 
     drawTexMapMesh(model, ctx);
-  });
+  }, [activeSkin]);
 
   function startDrag(evt) {
     // TODO: disable selecting text while dragging
@@ -60,6 +67,14 @@ export default function Skin({ scene, onClose }) {
     // window.addEventListener('mousedown', stopDrag);
   }
 
+  function onPickSkin(i) {
+    setActiveSkin(i);
+  }
+
+  const buttons = model.skins.map((skin, i) => {
+    return <button key={i} onClick={() => onPickSkin(i)}>{i}</button>
+  })
+
   return (
     <>
       <div className='dialog palette' style={style}
@@ -73,6 +88,7 @@ export default function Skin({ scene, onClose }) {
           width={width} height={height}
           style={{width: width*2, height: height*2}}
         />
+        {buttons}
       </div>
     </>
   );
