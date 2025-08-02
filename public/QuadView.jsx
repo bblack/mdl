@@ -1,7 +1,7 @@
 import PerspectiveProjection from './PerspectiveProjection.jsx';
 import OrthoWireProjection from './OrthoWireProjection.jsx';
 
-export default function QuadView({ scene, tool, onToolSelected }) {
+export default function QuadView({ scene, activeSkin, tool, onToolSelected }) {
   function _onToolSelected(x) {
       onToolSelected(x);
   }
@@ -27,7 +27,7 @@ export default function QuadView({ scene, tool, onToolSelected }) {
         />
       </div>
       <div className='pane s e'>
-        <PerspectiveProjection scene={scene} tool={tool}
+        <PerspectiveProjection scene={scene} activeSkin={activeSkin} tool={tool}
           mv={[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]}
         />
       </div>

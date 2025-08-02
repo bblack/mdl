@@ -5,7 +5,17 @@ import Skin from './Skin.jsx';
 const TOOL_NAMES = ['single', 'sweep', 'move', 'addvert', 'addtri', 'addcube'];
 
 export default function Controls({
-  scene, playing, tool, onClickPlay, onClickStop, onChangeFrame, onOpen, onSave, onToolSelected
+  scene,
+  activeSkin,
+  playing,
+  tool,
+  onClickPlay,
+  onClickStop,
+  onChangeFrame,
+  onOpen,
+  onSave,
+  onToolSelected,
+  onPickSkin
 }) {
   const ent = !scene.entities.length ? null : scene.entities[0];
   const model = !ent ? null : ent.model;
@@ -101,7 +111,14 @@ export default function Controls({
       <hr/>
 
       {showSkinModal &&
-        createPortal(<Skin scene={scene} onClose={() => setShowSkinModal(false)} />, document.body)
+        createPortal(
+          <Skin scene={scene}
+            activeSkin={activeSkin}
+            onClose={() => setShowSkinModal(false)}
+            onPickSkin={onPickSkin}
+          />,
+          document.body
+        )
       }
     </div>
   )

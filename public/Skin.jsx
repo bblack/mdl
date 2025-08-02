@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function Skin({ scene, onClose }) {
+export default function Skin({ scene, activeSkin, onClose, onPickSkin }) {
   const canvasRef = useRef(null);
   const [style, setStyle] = useState({
     position: 'absolute',
@@ -13,36 +13,32 @@ export default function Skin({ scene, onClose }) {
     boxShadow: '0 2px 8px black',
     padding: '1em'
   });
-  const [activeSkin, setActiveSkin] = useState(0);
 
   const palette = scene.palette;
   const model = scene.entities[0].model;
   const width = model.skinWidth;
   const height = model.skinHeight;
 
-  // if (activeSkin != 0) {
-  //   setActiveSkin(0);
-  // }
-
   useEffect(() => {
-    debugger;
-    const pixelBytes = [];
     const skin = model.skins[activeSkin];
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const imageData = buildImageDataFromSkin(skin);
 
+    ctx.putImageData(imageData, 0, 0);
+    drawTexMapMesh(model, ctx);
+  }, [activeSkin]);
+
+  function buildImageDataFromSkin(skin) {
+    const pixelBytes = [];
     new Uint8Array(skin.data.data).forEach((color) => {
       const rgba = palette[color].concat(0xff); // alpha opaque
       pixelBytes.push.apply(pixelBytes, rgba);
     });
-    const imageData = new ImageData(
+    return new ImageData(
       new Uint8ClampedArray(pixelBytes), width, height
     );
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.putImageData(imageData, 0, 0);
-
-    drawTexMapMesh(model, ctx);
-  }, [activeSkin]);
+  }
 
   function startDrag(evt) {
     // TODO: disable selecting text while dragging
@@ -65,10 +61,6 @@ export default function Skin({ scene, onClose }) {
     window.addEventListener('mousemove', drag);
     window.addEventListener('mouseup', stopDrag);
     // window.addEventListener('mousedown', stopDrag);
-  }
-
-  function onPickSkin(i) {
-    setActiveSkin(i);
   }
 
   const buttons = model.skins.map((skin, i) => {

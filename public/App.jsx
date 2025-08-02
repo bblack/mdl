@@ -34,6 +34,7 @@ export default function App({ }) {
       entities: []
     }
   );
+  const [activeSkin, setActiveSkin] = useState(0);
   const [playing, setPlaying] = useState(false);
   const lerpFrameRequest = useRef(null);
 
@@ -84,6 +85,7 @@ export default function App({ }) {
       Object.assign(newScene, scene);
 
       setScene(newScene);
+      setActiveSkin(0);
     }
     fr.readAsArrayBuffer(file);
   }
@@ -108,6 +110,10 @@ export default function App({ }) {
 
   function onChangeFrame(newFrame) {
     scene.entities.forEach((ent) => ent.frame = newFrame)
+  }
+
+  function onPickSkin(i) {
+    setActiveSkin(i);
   }
 
   function play() {
@@ -151,12 +157,15 @@ export default function App({ }) {
 
   return (
     <>
-      <Controls scene={scene} playing={playing} tool={tool}
+      <Controls scene={scene}
+        activeSkin={activeSkin}
+        playing={playing} tool={tool}
         onOpen={onOpen} onSave={onSave} onClickPlay={onClickPlay}
         onClickStop={onClickStop} onToolSelected={onToolSelected}
         onChangeFrame={onChangeFrame}
+        onPickSkin={onPickSkin}
       />
-      <QuadView scene={scene} tool={tool}
+      <QuadView scene={scene} activeSkin={activeSkin} tool={tool}
         onToolSelected={onToolSelected}
       />
     </>

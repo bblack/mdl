@@ -152,7 +152,7 @@ function setCamSpaceMatrix(mv, pitch, yaw, gl, axisShaderProgram, shaderProgram)
     gl.uniformMatrix4fv(camSpaceMatrixU, false, camSpaceMatrix);
 }
 
-export default function PerspectiveProjection({mv, scene}) {
+export default function PerspectiveProjection({mv, scene, activeSkin}) {
   console.log('PerspectiveProjection entered');
 
   const canvasRef = useRef(null);
@@ -258,7 +258,8 @@ export default function PerspectiveProjection({mv, scene}) {
     const palette = scene.palette;
     const model = scene.entities[0].model;
     var pixels = new Uint8Array(model.skinWidth * model.skinHeight * 4);
-    var skinBuffer = new Uint8Array(model.skins[0].data.data);
+    const skin = model.skins[activeSkin];
+    var skinBuffer = new Uint8Array(skin.data.data);
     skinBuffer.forEach((palidx, pixnum) => {
         var rgba = palette[palidx].concat(0xff); // alpha opaque
         pixels.set(rgba, pixnum * 4);
@@ -269,9 +270,11 @@ export default function PerspectiveProjection({mv, scene}) {
     render();
   }, [
     // if we have a new canvas, we'd have a new gl context etc:
-    canvasRef.current,
+    // canvasRef.current,
     // a new scene may have a new texture, and since we only load that into GL in the above function:
-    scene
+    scene,
+    activeSkin,
+    mv
   ]);
 
   if (scene.entities.length == 0) return null;
