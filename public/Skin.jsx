@@ -75,12 +75,14 @@ export default function Skin({ scene, activeSkin, onClose, onPickSkin }) {
           <div className='title'>skin</div>
           <div className='close' onClick={onClose}></div>
         </div>
+        <div className='buttons' style={{display: 'inlineBlock'}}>
+          {buttons}
+        </div>
         {paletteTable(palette)}
         <canvas className='skin' ref={canvasRef}
           width={width} height={height}
           style={{width: width*2, height: height*2}}
         />
-        {buttons}
       </div>
     </>
   );
