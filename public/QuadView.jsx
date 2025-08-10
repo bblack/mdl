@@ -12,21 +12,18 @@ export default function QuadView({ scene, activeSkin, tool, onToolSelected }) {
         <OrthoWireProjection scene={scene} tool={tool}
           onToolSelected={_onToolSelected}
           mv={[1,0,0,0,  0,0,1,0,  0,1,0,0,  0,0,40,1]}
-          rotAxis={[0, -1, 0]}
         />
       </div>
       <div className='pane n e'>
         <OrthoWireProjection scene={scene} tool={tool}
           onToolSelected={_onToolSelected}
           mv={[0,0,1,0,  1,0,0,0,  0,1,0,0,  0,0,40,1]}
-          rotAxis={[1, 0, 0]}
         />
       </div>
       <div className='pane s w'>
         <OrthoWireProjection scene={scene} tool={tool}
           onToolSelected={_onToolSelected}
           mv={[0,1,0,0,  -1,0,0,0,  0,0,1,0,  0,0,40,1]}
-          rotAxis={[0, 0, 1]}
         />
       </div>
       <div className='pane s e'>

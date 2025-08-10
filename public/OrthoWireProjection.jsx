@@ -408,7 +408,7 @@ function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
 }
 
 // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
-export default function OrthoWireProjection({mv, rotAxis, scene, tool, onToolSelected}) {
+export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
   console.log('OrthoWireProjection entered');
 
   const canvasRef = useRef(null);
@@ -700,9 +700,7 @@ export default function OrthoWireProjection({mv, rotAxis, scene, tool, onToolSel
             const model = _model();
             const selectedVerts = _tool().selectedVerts;
             const frame = Math.floor(scene.entities[0].frame);
-            const dx = x - fromScr[0];
-            const dy = y - fromScr[1];
-            const d = sqrt(dx * dx + dy * dy) * ((dx < 0 ^ dy < 0) ? -1 : 1);
+
             const angle = atan2(toNDC[1], toNDC[0])
               - atan2(fromNDC[1], fromNDC[0]);
             const originalPositions = _tool().originalPositions;
@@ -712,10 +710,11 @@ export default function OrthoWireProjection({mv, rotAxis, scene, tool, onToolSel
             const rotateSelectedVerts = function () {
               selectedVerts.forEach((vertIndex, i) => {
                 const v = model.frames[frame].simpleFrame.verts[vertIndex];
-                // we should be able to compute the rotation axis by just looking down the camera barrel - i.e. taking cross of canvas x and y axes and projecting that into world - but i can't figure out the right fucking math, so for now:
-                const axis = Vec3.fromArray(rotAxis);
-                const vr = originalPositions[i]
-                  .rotate(angle, axis);
+                // look right down the camera - i.e. z+ axis in cam space - and transform it to world space. (mv is row-major so the indeces are wack)
+                const xBasis = new Vec3(mv[0], mv[4], mv[8]);
+                const yBasis = new Vec3(mv[1], mv[5], mv[9]);
+                const axis = xBasis.cross(yBasis);
+                const vr = originalPositions[i].rotate(angle, axis);
 
                 v.x = vr.x;
                 v.y = vr.y;
