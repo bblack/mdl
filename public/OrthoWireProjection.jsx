@@ -1,7 +1,8 @@
 import { mat3, mat4, vec2, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
+import fv from './fv.js';
 import { useEffect, useRef, useState } from 'react';
 
-const {max, min, abs} = Math;
+const {atan2, max, min, abs, sqrt, PI} = Math;
 
 const UNIT_CUBE = {
   verts: [
@@ -27,6 +28,13 @@ const UNIT_CUBE = {
     [4, 7, 3],
     [6, 5, 1],
     [1, 2, 6]
+  ]
+}
+
+function ndcFromCanvasCoords(coords, w, h) {
+  return [
+    coords[0] / w * 2 - 1,
+    -(coords[1] / h * 2 - 1)
   ]
 }
 
@@ -349,8 +357,8 @@ function getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix) {
 function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr) {
     var w = canvas.clientWidth;
     var h = canvas.clientHeight;
-    var fromNDC = [fromScr[0]/w*2-1, fromScr[1]/h*-2+1, 0, 1];
-    var toNDC = [toScr[0]/w*2-1, toScr[1]/h*-2+1, 0, 1];
+    var fromNDC = ndcFromCanvasCoords(fromScr, w, h);
+    var toNDC = ndcFromCanvasCoords(toScr, w, h);
     var fromObj = ndcToWorld(fromNDC, projectionMatrix, camSpaceMatrix);
     var toObj = ndcToWorld(toNDC, projectionMatrix, camSpaceMatrix);
     var delta = vec4.create();
@@ -366,10 +374,8 @@ function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix
 }
 
 function getVertsIn(x1, y1, x2, y2, w, h, camSpaceMatrix, projectionMatrix, scene) {
-    var x1ndc = x1 / w * 2 - 1;
-    var y1ndc = y1 / h * -2 + 1;
-    var x2ndc = x2 / w * 2 - 1;
-    var y2ndc = y2 / h * -2 + 1;
+    const [x1ndc, y1ndc] = ndcFromCanvasCoords([x1, y1], w, h);
+    const [x2ndc, y2ndc] = ndcFromCanvasCoords([x2, y2], w, h);
     var xlondc = Math.min(x1ndc, x2ndc);
     var xhindc = Math.max(x1ndc, x2ndc);
     var ylondc = Math.min(y1ndc, y2ndc);
@@ -661,6 +667,74 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
         scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
       }
     },
+    'rotate': {
+      onMouseDown: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const model = _model();
+        const frame = Math.floor(scene.entities[0].frame);
+        const originalPositions = scene.selectedVerts.map(i => {
+          const v = model.frames[frame].simpleFrame.verts[i];
+          return new fv.Vec3(v.x, v.y, v.z);
+        });
+
+        Object.assign(_tool(), {
+          state: 'rotating',
+          movingFrom: [x, y],
+          angle: 0,
+          // probably need axis in world space too
+          selectedVerts: scene.selectedVerts,
+          originalPositions: originalPositions
+        });
+      },
+      onMouseMove: (evt) => {
+        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+        const canvas = canvasRef.current;
+        const [w, h] = [canvas.width, canvas.height];
+
+        switch (_tool().state) {
+          case 'rotating':
+            const fromScr = _tool().movingFrom.slice(); // copy
+            const fromNDC = ndcFromCanvasCoords(fromScr, w, h);
+            const toScr = [x, y];
+            const toNDC = ndcFromCanvasCoords(toScr, w, h);
+            const model = _model();
+            const selectedVerts = _tool().selectedVerts;
+            const frame = Math.floor(scene.entities[0].frame);
+            const dx = x - fromScr[0];
+            const dy = y - fromScr[1];
+            const d = sqrt(dx * dx + dy * dy) * ((dx < 0 ^ dy < 0) ? -1 : 1);
+            const angle = atan2(toNDC[1], toNDC[0])
+              - atan2(fromNDC[1], fromNDC[0]);
+            const originalPositions = _tool().originalPositions;
+
+            console.log(`${atan2(fromScr[1], fromScr[0]) / PI} pi -> ${atan2(y, x) / PI} pi; diff ${angle / PI} pi`)
+
+            const rotateSelectedVerts = function () {
+              selectedVerts.forEach((vertIndex, i) => {
+                const v = model.frames[frame].simpleFrame.verts[vertIndex];
+                const vr = originalPositions[i]
+                  .rotateZ(angle);
+
+                v.x = vr.x;
+                v.y = vr.y;
+                v.z = vr.z;
+              });
+            };
+
+            // moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
+            rotateSelectedVerts();
+            // _tool().movingFrom = [x, y];
+            break;
+          default:
+        }
+      },
+      onMouseUp: (evt) => {
+        switch (_tool().state) {
+          case 'rotating':
+            onToolSelected('rotate');
+        }
+      }
+    },
     'move': {
       onMouseDown: (evt) => {
         const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
@@ -765,14 +839,8 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
             console.log(`between (${movingFrom[0]}, ${movingFrom[1]}) and (${x}, ${y}), selected ${scene.selectedVerts.length} verts`)
 
-            var fromNDC = [
-              movingFrom[0] / w * 2 - 1,
-              movingFrom[1] / h * -2 + 1
-            ];
-            var toNDC = [
-              x / w * 2 - 1,
-              y / h * -2 + 1
-            ];
+            var fromNDC = ndcFromCanvasCoords(movingFrom, w, h);
+            var toNDC = ndcFromCanvasCoords([x, y], w, h);
 
             _tool().sweepBoxVerts = new Float32Array([
               fromNDC[0], fromNDC[1], 0, // x, y, z NDC
@@ -793,6 +861,10 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
         }
       }
     }
+  }
+
+  function _model() {
+    return scene.entities[0].model;
   }
 
   function toolName() {
