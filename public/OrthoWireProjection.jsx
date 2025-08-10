@@ -1,5 +1,5 @@
 import { mat3, mat4, vec2, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
-import fv from './fv.js';
+import { Mat3, Vec3 } from './fv.js';
 import { useEffect, useRef, useState } from 'react';
 
 const {atan2, max, min, abs, sqrt, PI} = Math;
@@ -408,7 +408,7 @@ function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
 }
 
 // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
-export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
+export default function OrthoWireProjection({mv, rotAxis, scene, tool, onToolSelected}) {
   console.log('OrthoWireProjection entered');
 
   const canvasRef = useRef(null);
@@ -674,7 +674,7 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
         const frame = Math.floor(scene.entities[0].frame);
         const originalPositions = scene.selectedVerts.map(i => {
           const v = model.frames[frame].simpleFrame.verts[i];
-          return new fv.Vec3(v.x, v.y, v.z);
+          return new Vec3(v.x, v.y, v.z);
         });
 
         Object.assign(_tool(), {
@@ -712,8 +712,10 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
             const rotateSelectedVerts = function () {
               selectedVerts.forEach((vertIndex, i) => {
                 const v = model.frames[frame].simpleFrame.verts[vertIndex];
+                // we should be able to compute the rotation axis by just looking down the camera barrel - i.e. taking cross of canvas x and y axes and projecting that into world - but i can't figure out the right fucking math, so for now:
+                const axis = Vec3.fromArray(rotAxis);
                 const vr = originalPositions[i]
-                  .rotateZ(angle);
+                  .rotate(angle, axis);
 
                 v.x = vr.x;
                 v.y = vr.y;
