@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Controls from './Controls.jsx';
 import QuadView from './QuadView.jsx';
 import Mdl from './Mdl.js';
+import tools from './tools.js';
 
 function fetchModel() {
   return fetch('/player.mdl')
@@ -27,7 +28,7 @@ export default function App({ }) {
   // -- members --
   var lastTickTime;
   const selectedVerts = [];
-  const [tool, settool] = useState({ name: 'single' });
+  const [tool, setTool] = useState(new tools.single());
   const [scene, _setScene] = useState(
     {
       selectedVerts: selectedVerts,
@@ -105,7 +106,16 @@ export default function App({ }) {
   }
 
   function onToolSelected(toolName) {
-    settool({name: toolName})
+    const toolClass = tools[toolName];
+
+    if (!toolClass) {
+      console.log(`no tool class found for "${toolName}"`);
+      return;
+    }
+
+    const tool = new toolClass();
+    console.log(`setting tool to new ${toolClass.name}`);
+    setTool(tool);
   }
 
   function onChangeFrame(newFrame) {

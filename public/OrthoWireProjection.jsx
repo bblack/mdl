@@ -1,41 +1,13 @@
-import { mat3, mat4, vec2, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
+import { mat3, mat4, vec3, vec4 } from './components/gl-matrix/lib/gl-matrix.js';
 import { Mat3, Vec3 } from './fv.js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-const {atan2, max, min, abs, sqrt, PI} = Math;
-
-const UNIT_CUBE = {
-  verts: [
-    [0, 0, 0],
-    [0, 1, 0],
-    [1, 1, 0],
-    [1, 0, 0],
-    [0, 0, 1],
-    [0, 1, 1],
-    [1, 1, 1],
-    [1, 0, 1],
-  ],
-  tris: [
-    [2, 1, 0],
-    [0, 3, 2],
-    [5, 6, 7],
-    [7, 4, 5],
-    [1, 5, 4],
-    [4, 0, 1],
-    [6, 2, 3],
-    [3, 7, 6],
-    [3, 0, 4],
-    [4, 7, 3],
-    [6, 5, 1],
-    [1, 2, 6]
-  ]
-}
+const {max, PI} = Math;
 
 function ndcFromCanvasCoords(coords, w, h) {
-  return [
-    coords[0] / w * 2 - 1,
-    -(coords[1] / h * 2 - 1)
-  ]
+  const x = coords[0] / w * 2 - 1;
+  const y = -(coords[1] / h * 2 - 1);
+  return [x, y, 0, 1];
 }
 
 function createAxisShaderProgram(gl){
@@ -367,6 +339,7 @@ function moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix
     selectedVerts.forEach((vertIndex) => {
         // var vert = $scope.model.frames[Math.floor($scope.$root.frame)].simpleFrame.verts[vertIndex];
         var vert = model.frames[frame].simpleFrame.verts[vertIndex];
+
         vert.x += delta[0];
         vert.y += delta[1];
         vert.z += delta[2];
@@ -408,7 +381,9 @@ function worldToNDC(vert, camSpaceMatrix, projectionMatrix) {
 }
 
 // TODO: scene ref was given to this component by parent. instead of manipulating scene contents directly, like scene.selectedVerts, we should emit event and allow something up top to set it. but for now, we edit them in place.
-export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
+export default function OrthoWireProjection({
+  mv, scene, tool, onMouseDown, onMouseMove, onMouseUp
+}) {
   console.log('OrthoWireProjection entered');
 
   const canvasRef = useRef(null);
@@ -559,347 +534,51 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
 
   }, []);
 
-  const handlersByToolName = {
-    'addcube': {
-      onMouseDown: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const model = scene.entities[0].model;
-        const { verts, tris } = UNIT_CUBE;
-        const newVertIndeces = verts.map(v => model.addVert(v));
-        // TODO create Model#addtri
-        tris.forEach(tri => {
-          tri = tri.map(vertInd => model.vertexCount() + vertInd - verts.length);
-          model.triangles.push({ facesFront: 0, vertIndeces: tri });
-        });
-
-        console.log('added verts ' + newVertIndeces.join(', '));
-
-        Object.assign(_tool(), {
-          state: 'scaling',
-          canvasStartPos: [x, y],
-          geomVerts: verts, // geometry prototype, e.g. unit cube with origin (0,0,0)
-          geomPos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
-          modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i)
-        });
-      },
-      onMouseMove: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const model = scene.entities[0].model;
-
-        if (_tool().state == 'scaling') {
-          const canvas = canvasRef.current;
-          const { modelVertIndeces, geomVerts, geomPos, canvasStartPos } = _tool();
-
-          const basis = computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camSpaceMatrix);
-
-          const newGeomVertCoords = modelVertIndeces.map((vertIndex, i) => {
-            const geomVert = vec3.fromValues.apply(vec3, geomVerts[i]);
-            const outVert = vec3.create();
-
-            vec3.transformMat3(outVert, geomVert, basis);
-            vec3.add(outVert, outVert, vec3.fromValues.apply(vec3, geomPos));
-
-            // console.log(`geom vert ${i}: (${geomVert.join(', ')}) -> (${outVert.join(', ')})`)
-
-            return outVert;
-          });
-
-          model.frames.forEach(f => {
-            const geomVerts = _tool().geomVerts;
-
-            modelVertIndeces.forEach((vertIndex, i) => {
-              f.simpleFrame.verts[vertIndex] = {
-                x: newGeomVertCoords[i][0],
-                y: newGeomVertCoords[i][1],
-                z: newGeomVertCoords[i][2]
-              }
-            });
-          });
-        }
-      },
-      onMouseUp: (evt) => {
-        // scene.selectedVerts = _tool().modelVertIndeces;
-        // 1. WHY DOES THE ABOVE MEAN THAT SUBSEQUENT DRAWS REFLECT THE OLD SELECTION FOREVER?
-        scene.selectedVerts.splice(0, scene.selectedVerts.length, ..._tool().modelVertIndeces)
-        onToolSelected('addcube'); // clear all other tool state
-      }
-    },
-    'addtri': {
-      onMouseDown: (evt) => {
-        const newtri = _tool().newtri;
-
-        switch (_tool().state) {
-          case 'vert2':
-            newtri.vertIndeces.push(scene.selectedVerts[0]);
-            _tool().state = 'vert3';
-            break;
-          case 'vert3':
-            newtri.vertIndeces.push(scene.selectedVerts[0]);
-            scene.entities[0].model.triangles.push(newtri);
-            _tool().newtri = null;
-            onToolSelected('addtri');
-            break;
-          default: // initial state
-            _tool().newtri = {
-              facesFront: 0,
-              vertIndeces: [scene.selectedVerts[0]]
-            };
-            _tool().state = 'vert2';
-        }
-      },
-      onMouseMove: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const [w, h] = [canvas.width, canvas.height];
-        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
-
-        // replace selected verts with vert nearest to cursor
-        scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
-      }
-    },
-    'addvert': {
-      onMouseDown: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const vWorld = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
-        scene.entities[0].model.addVert(vWorld[0], vWorld[1], vWorld[2]);
-      }
-    },
-    'rotate': {
-      onMouseDown: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const model = _model();
-        const frame = Math.floor(scene.entities[0].frame);
-        const originalPositions = scene.selectedVerts.map(i => {
-          const v = model.frames[frame].simpleFrame.verts[i];
-          return new Vec3(v.x, v.y, v.z);
-        });
-
-        Object.assign(_tool(), {
-          state: 'rotating',
-          movingFrom: [x, y],
-          angle: 0,
-          // probably need axis in world space too
-          selectedVerts: scene.selectedVerts,
-          originalPositions: originalPositions
-        });
-      },
-      onMouseMove: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const [w, h] = [canvas.width, canvas.height];
-
-        switch (_tool().state) {
-          case 'rotating':
-            const fromScr = _tool().movingFrom.slice(); // copy
-            const fromNDC = ndcFromCanvasCoords(fromScr, w, h);
-            const toScr = [x, y];
-            const toNDC = ndcFromCanvasCoords(toScr, w, h);
-            const model = _model();
-            const selectedVerts = _tool().selectedVerts;
-            const frame = Math.floor(scene.entities[0].frame);
-
-            const angle = atan2(toNDC[1], toNDC[0])
-              - atan2(fromNDC[1], fromNDC[0]);
-            const originalPositions = _tool().originalPositions;
-
-            console.log(`${atan2(fromScr[1], fromScr[0]) / PI} pi -> ${atan2(y, x) / PI} pi; diff ${angle / PI} pi`)
-
-            const rotateSelectedVerts = function () {
-              selectedVerts.forEach((vertIndex, i) => {
-                const v = model.frames[frame].simpleFrame.verts[vertIndex];
-                // look right down the camera - i.e. z+ axis in cam space - and transform it to world space. (mv is row-major so the indeces are wack)
-                const xBasis = new Vec3(mv[0], mv[4], mv[8]);
-                const yBasis = new Vec3(mv[1], mv[5], mv[9]);
-                const axis = xBasis.cross(yBasis);
-                const vr = originalPositions[i].rotate(angle, axis);
-
-                v.x = vr.x;
-                v.y = vr.y;
-                v.z = vr.z;
-              });
-            };
-
-            // moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-            rotateSelectedVerts();
-            // _tool().movingFrom = [x, y];
-            break;
-          default:
-        }
-      },
-      onMouseUp: (evt) => {
-        switch (_tool().state) {
-          case 'rotating':
-            onToolSelected('rotate');
-        }
-      }
-    },
-    'move': {
-      onMouseDown: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        Object.assign(_tool(), {
-          movingFrom: [x, y],
-          state: 'moving'
-        });
-      },
-      onMouseMove: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const [w, h] = [canvas.width, canvas.height];
-
-        switch (_tool().state) {
-          case 'moving':
-            const fromScr = _tool().movingFrom.slice(); // copy
-            const toScr = [x, y];
-            const model = scene.entities[0].model;
-            const selectedVerts = scene.selectedVerts;
-            const frame = Math.floor(scene.entities[0].frame);
-            const projectionMatrix = buildProjectionMatrix(w, h, zoom);
-
-            moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-            _tool().movingFrom = [x, y];
-            break;
-          default:
-        }
-      },
-      onMouseUp: (evt) => {
-        switch (_tool().state) {
-          case 'moving':
-            onToolSelected('move');
-        }
-      }
-    },
-    'single': {
-      onMouseDown: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        Object.assign(_tool(), {
-          movingFrom: [x, y],
-          state: 'moving'
-        });
-      },
-      onMouseLeave: (evt) => {
-        if (_tool().state == 'moving') {
-          onToolSelected('single');
-        }
-      },
-      onMouseMove: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const [w, h] = [canvas.width, canvas.height];
-        const projectionMatrix = buildProjectionMatrix(w, h, zoom);
-        const closestVertIndex = getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix);
-
-        const ent = scene.entities[0];
-
-        // console.log(`selecting vert ${closestVertIndex} with position ${JSON.stringify(ent.model.frames[Math.floor(ent.frame)].simpleFrame.verts[closestVertIndex])}`)
-
-        switch (_tool().state) {
-          case 'moving':
-            const fromScr = _tool().movingFrom.slice(); // copy
-            const toScr = [x, y];
-            const model = scene.entities[0].model;
-            const selectedVerts = scene.selectedVerts;
-            const frame = Math.floor(scene.entities[0].frame);
-            moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
-            _tool().movingFrom = [x, y];
-          default:
-            scene.selectedVerts.splice(0, scene.selectedVerts.length, closestVertIndex);
-        }
-      },
-      onMouseUp: (evt) => {
-        if (_tool().state == 'moving') {
-          onToolSelected('single');
-        }
-      }
-    },
-    'sweep': {
-      onMouseDown: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        Object.assign(_tool(), {
-          state: 'sweeping',
-          movingFrom: [x, y],
-          sweepBoxVerts: null,
-          componentRef: componentRef
-        });
-      },
-      onMouseMove: (evt) => {
-        const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-        const canvas = canvasRef.current;
-        const [w, h] = [canvas.width, canvas.height];
-
-        switch (_tool().state) {
-          case 'sweeping':
-            const movingFrom = _tool().movingFrom;
-            const projectionMatrix = buildProjectionMatrix(w, h, zoom);
-            const selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,
-              w, h, camSpaceMatrix, projectionMatrix, scene);
-
-            scene.selectedVerts.splice(0, scene.selectedVerts.length, ...selectedVerts);
-
-            console.log(`between (${movingFrom[0]}, ${movingFrom[1]}) and (${x}, ${y}), selected ${scene.selectedVerts.length} verts`)
-
-            var fromNDC = ndcFromCanvasCoords(movingFrom, w, h);
-            var toNDC = ndcFromCanvasCoords([x, y], w, h);
-
-            _tool().sweepBoxVerts = new Float32Array([
-              fromNDC[0], fromNDC[1], 0, // x, y, z NDC
-              fromNDC[0], toNDC[1], 0,
-              toNDC[0], toNDC[1], 0,
-              toNDC[0], fromNDC[1], 0
-            ]);
-            break;
-          default:
-        }
-      },
-      onMouseUp: (evt) => {
-        switch (_tool().state) {
-          case 'sweeping':
-            onToolSelected('sweep');
-            break;
-          default:
-        }
-      }
-    }
-  }
-
-  function _model() {
-    return scene.entities[0].model;
-  }
-
-  function toolName() {
-    return _tool().name;
-  }
-
   function _tool() {
     return toolRef.current;
   }
 
   // ---
 
-  function onMouseDown(evt) {
-    const handlers = handlersByToolName[toolName()];
-    const f = handlers ? handlers.onMouseDown : null;
-    if (f) f(evt);
+  function onCanvasMouseDown(evt) {
+    onMouseDown?.(augmentEvent(evt));
   }
 
-  function onMouseLeave(evt) {
-    const handlers = handlersByToolName[toolName()];
-    const f = handlers ? handlers.onMouseLeave : null;
-    if (f) f(evt);
+  function onCanvasMouseMove(evt) {
+    onMouseMove?.(augmentEvent(evt));
   }
 
-  function onMouseMove(evt) {
-    const handlers = handlersByToolName[toolName()];
-    const f = handlers ? handlers.onMouseMove : null;
-    if (f) f(evt);
+  function onCanvasMouseUp(evt) {
+    onMouseUp?.(augmentEvent(evt));
   }
 
-  function onMouseUp(evt) {
-    const handlers = handlersByToolName[toolName()];
-    const f = handlers ? handlers.onMouseUp : null;
-    if (f) f(evt);
+  function augmentEvent(evt) {
+    const canvas = evt.target;
+    console.assert(canvas.tagName == 'CANVAS');
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+
+    return Object.assign({}, {
+      camSpaceMatrix,
+      canvas,
+      componentRef,
+      frame: scene.entities[0].frame,
+      model: scene.entities[0].model,
+      mv,
+      projectionMatrix,
+      scene,
+      zoom,
+      // TODO: stop passing fns. move them up, and pass only data.
+      buildProjectionMatrix,
+      computeBasisMat3ForNewGeometry,
+      getClosestVert,
+      getVertsIn,
+      moveSelectedVerts,
+      ndcFromCanvasCoords,
+      worldPosFromCanvasPos,
+    }, evt);
   }
 
   function onWheel(evt) {
@@ -918,10 +597,9 @@ export default function OrthoWireProjection({mv, scene, tool, onToolSelected}) {
   return (
     <canvas
         ref={canvasRef}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseLeave}
-        onMouseMove={onMouseMove}
+        onMouseDown={onCanvasMouseDown}
+        onMouseUp={onCanvasMouseUp}
+        onMouseMove={onCanvasMouseMove}
         onWheel={onWheel}
     ></canvas>
   )
