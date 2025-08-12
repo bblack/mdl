@@ -4,12 +4,10 @@ export default class AddvertTool {
   }
 
   onMouseDown(evt) {
-    // hacky indictor for "is this event from a OrthoWireProjection component".
-    // TODO: make clearer, maybe collect all these in something explicitly named for that component
-    if (!evt.canvas) return;
+    if (!evt.orthoWireProjection) return;
 
     const [x, y] = [evt.offsetX, evt.offsetY];
-    const { canvas, worldPosFromCanvasPos, zoom, camSpaceMatrix, model } = evt;
+    const { canvas, worldPosFromCanvasPos, zoom, camSpaceMatrix, model } = evt.orthoWireProjection;
     const vWorld = worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix);
     model.addVert(vWorld[0], vWorld[1], vWorld[2]);
   }

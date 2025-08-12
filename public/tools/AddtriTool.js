@@ -9,12 +9,10 @@ export default class AddtriTool {
   }
 
   onMouseDown(evt) {
-    // hacky indictor for "is this event from a OrthoWireProjection component".
-    // TODO: make clearer, maybe collect all these in something explicitly named for that component
-    if (!evt.canvas) return;
+    if (!evt.orthoWireProjection) return;
 
     const newtri = this.newtri;
-    const { scene } = evt;
+    const { scene } = evt.orthoWireProjection;
 
     switch (this.state) {
       case 'vert2':
@@ -37,14 +35,12 @@ export default class AddtriTool {
   }
 
   onMouseMove(evt) {
-    // hacky indictor for "is this event from a OrthoWireProjection component".
-    // TODO: make clearer, maybe collect all these in something explicitly named for that component
-    if (!evt.canvas) return;
+    if (!evt.orthoWireProjection) return;
 
     const [x, y] = [evt.offsetX, evt.offsetY];
     const {
       buildProjectionMatrix, getClosestVert, camSpaceMatrix, canvas, scene, zoom
-    } = evt;
+    } = evt.orthoWireProjection;
     const [w, h] = [canvas.width, canvas.height];
     const projectionMatrix = buildProjectionMatrix(w, h, zoom);
     const closestVertIndex = getClosestVert(

@@ -12,22 +12,15 @@ export default class RotateTool {
     delete this.angle;
     delete this.selectedVerts;
     delete this.originalPositions;
-    delete this.model;
-    delete this.scene;
-    delete this.frame;
-    delete this.canvas;
-    delete this.mv;
-    delete this.ndcFromCanvasCoords;
+    delete this.orthoWireProjection;
   }
 
   onMouseDown(evt) {
-    // hacky indictor for "is this event from a OrthoWireProjection component".
-    // TODO: make clearer, maybe collect all these in something explicitly named for that component
-    if (!evt.canvas) return;
+    if (!evt.orthoWireProjection) return;
 
     const [x, y] = [evt.offsetX, evt.offsetY];
-    const { model, scene } = evt;
-    const frame = floor(evt.frame);
+    const { model, scene } = evt.orthoWireProjection;
+    const frame = floor(evt.orthoWireProjection.frame);
     const originalPositions = scene.selectedVerts.map(i => {
       const v = model.frames[frame].simpleFrame.verts[i];
       return new Vec3(v.x, v.y, v.z);
@@ -40,18 +33,14 @@ export default class RotateTool {
       // probably need axis in world space too
       selectedVerts: scene.selectedVerts,
       originalPositions: originalPositions,
-      model,
-      scene,
-      frame: Math.floor(evt.frame),
-      canvas: evt.canvas,
-      mv: evt.mv,
-      ndcFromCanvasCoords: evt.ndcFromCanvasCoords
+      orthoWireProjection: evt.orthoWireProjection
     });
   }
 
   onMouseMove(evt) {
     if (this.state == 'rotating') {
-      const { canvas, model, mv, ndcFromCanvasCoords, frame, movingFrom, selectedVerts, originalPositions } = this;
+      const { movingFrom, selectedVerts, originalPositions } = this;
+      const { canvas, model, mv, ndcFromCanvasCoords, frame } = this.orthoWireProjection;
       const canvasBounds = canvas.getBoundingClientRect();
       const [x, y] = [evt.clientX - canvasBounds.x, evt.clientY - canvasBounds.y];
       const [w, h] = [canvas.width, canvas.height];

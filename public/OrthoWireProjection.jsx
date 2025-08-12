@@ -515,7 +515,7 @@ export default function OrthoWireProjection({
           if (_tool() &&
             _tool().name == 'sweep' &&
             _tool().state == 'sweeping' &&
-            _tool().componentRef == componentRef
+            _tool().orthoWireProjection.componentRef == componentRef
           ) {
             const sweepBoxVerts = _tool().sweepBoxVerts;
             drawSweepBox(gl, sweepShaderProgram, sweepBoxVertBuf, swPosAtt, sweepBoxVerts);
@@ -553,8 +553,7 @@ export default function OrthoWireProjection({
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     const projectionMatrix = buildProjectionMatrix(w, h, zoom);
-
-    return Object.assign(evt, {
+    const orthoWireProjection = {
       camSpaceMatrix,
       canvas,
       componentRef,
@@ -572,7 +571,8 @@ export default function OrthoWireProjection({
       moveSelectedVerts,
       ndcFromCanvasCoords,
       worldPosFromCanvasPos,
-    });
+    };
+    return Object.assign(evt, { orthoWireProjection });
   }
 
   function onWheel(evt) {

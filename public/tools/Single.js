@@ -1,3 +1,5 @@
+import OrthoWireProjection from "../OrthoWireProjection";
+
 export default class SingleTool {
   constructor() {
     this.name = 'single';
@@ -6,41 +8,23 @@ export default class SingleTool {
   reset() {
     delete this.movingFrom;
     delete this.state;
-    delete this.frame;
-    delete this.canvas;
-    delete this.buildProjectionMatrix;
-    delete this.zoom;
-    delete this.scene;
-    delete this.camSpaceMatrix;
-    delete this.moveSelectedVerts;
-    delete this.model;
+    delete this.orthoWireProjection;
   }
 
   onMouseDown(evt) {
-    // hacky indictor for "is this event from a OrthoWireProjection component".
-    // TODO: make clearer, maybe collect all these in something explicitly named for that component
-    if (!evt.canvas) return;
+    if (!evt.orthoWireProjection) return;
 
     Object.assign(this, {
       movingFrom: [evt.offsetX, evt.offsetY],
       state: 'moving',
-      // --
-      frame: Math.floor(evt.frame),
-      canvas: evt.canvas,
-      buildProjectionMatrix: evt.buildProjectionMatrix,
-      zoom: evt.zoom,
-      scene: evt.scene,
-      camSpaceMatrix: evt.camSpaceMatrix,
-      moveSelectedVerts: evt.moveSelectedVerts,
-      model: evt.model
+      orthoWireProjection: evt.orthoWireProjection
     });
   }
 
   onMouseMove(evt) {
     if (this.state == 'moving') {
-      let {
-        frame, canvas, movingFrom, buildProjectionMatrix, zoom, scene, moveSelectedVerts, camSpaceMatrix, model
-      } = this;
+      let { movingFrom } = this;
+      let { frame, canvas, buildProjectionMatrix, zoom, scene, moveSelectedVerts, camSpaceMatrix, model } = this.orthoWireProjection;
       let fromScr = movingFrom;
       let canvasBounds = canvas.getBoundingClientRect();
       let toScr = [evt.clientX - canvasBounds.x, evt.clientY - canvasBounds.y];
@@ -53,11 +37,10 @@ export default class SingleTool {
       );
       this.movingFrom = toScr;
     } else {
-      let {
-        canvas, scene, camSpaceMatrix, buildProjectionMatrix, zoom, getClosestVert
-      } = evt;
-
-      if (canvas) {
+      if (evt.orthoWireProjection) {
+        let {
+          canvas, scene, camSpaceMatrix, buildProjectionMatrix, zoom, getClosestVert
+        } = evt.orthoWireProjection;
         let [w, h] = [canvas.width, canvas.height];
         let [x, y] = [evt.offsetX, evt.offsetY];
         console.log(`(${[x, y]})`)

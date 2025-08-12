@@ -1,0 +1,5 @@
+notes
+
+there are a bunch of functions AND data we need in tool event handlers, which we're currently getting from the "mousedown" event, storing in state of tool for later "mousemove". it's a lot of fiddly bits, easy to miss one. we also have ot ensure we clear all those bits when we reset() the tool.
+
+easier: have the event include only a single property, ortho_pane, which is a reference to the component (or some object that's a gateway into those pieces which we need). then, the tool stores only that single ref, and when it needs pieces of it, calls them.
