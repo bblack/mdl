@@ -512,7 +512,8 @@ export default function OrthoWireProjection({
 
           drawAxes(gl, axisShaderProgram, axesbuf, axisvertexposatt, axisvertcoloratt);
 
-          if (_tool().name == 'sweep' &&
+          if (_tool() &&
+            _tool().name == 'sweep' &&
             _tool().state == 'sweeping' &&
             _tool().componentRef == componentRef
           ) {
@@ -534,15 +535,15 @@ export default function OrthoWireProjection({
   // ---
 
   function onCanvasMouseDown(evt) {
-    onMouseDown?.(augmentEvent(evt));
+    augmentEvent(evt.nativeEvent);
   }
 
   function onCanvasMouseMove(evt) {
-    onMouseMove?.(augmentEvent(evt));
+    augmentEvent(evt.nativeEvent);
   }
 
   function onCanvasMouseUp(evt) {
-    onMouseUp?.(augmentEvent(evt));
+    augmentEvent(evt.nativeEvent);
   }
 
   function augmentEvent(evt) {
@@ -553,7 +554,7 @@ export default function OrthoWireProjection({
     const h = canvas.clientHeight;
     const projectionMatrix = buildProjectionMatrix(w, h, zoom);
 
-    return Object.assign({}, {
+    return Object.assign(evt, {
       camSpaceMatrix,
       canvas,
       componentRef,
@@ -571,7 +572,7 @@ export default function OrthoWireProjection({
       moveSelectedVerts,
       ndcFromCanvasCoords,
       worldPosFromCanvasPos,
-    }, evt);
+    });
   }
 
   function onWheel(evt) {

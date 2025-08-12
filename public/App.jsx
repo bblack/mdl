@@ -24,11 +24,11 @@ function parsePalette(buf) {
 }
 
 
-export default function App({ }) {
+export default function App() {
   // -- members --
   var lastTickTime;
   const selectedVerts = [];
-  const [tool, setTool] = useState(new tools.single());
+  const [tool, setTool] = useState(null);
   const [scene, _setScene] = useState(
     {
       selectedVerts: selectedVerts,
@@ -40,6 +40,19 @@ export default function App({ }) {
   const lerpFrameRequest = useRef(null);
 
   // -- doin stuff --
+  useEffect(() => {
+    const onMousedown = (e) => tool?.onMouseDown?.(e);
+    const onMousemove = (e) => tool?.onMouseMove?.(e);
+    const onMouseup = (e) => tool?.onMouseUp?.(e);
+    document.addEventListener('mousedown', onMousedown);
+    document.addEventListener('mousemove', onMousemove);
+    document.addEventListener('mouseup', onMouseup);
+    return () => {
+      document.removeEventListener('mousedown', onMousedown);
+      document.removeEventListener('mousemove', onMousemove);
+      document.removeEventListener('mouseup', onMouseup);
+    }
+  }, [tool]);
 
   useEffect(() => {
     Promise.all([fetchPalette(), fetchModel()])
@@ -113,9 +126,8 @@ export default function App({ }) {
       return;
     }
 
-    const tool = new toolClass();
     console.log(`setting tool to new ${toolClass.name}`);
-    setTool(tool);
+    setTool(new toolClass());
   }
 
   function onChangeFrame(newFrame) {

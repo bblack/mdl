@@ -12,10 +12,20 @@ export default class RotateTool {
     delete this.angle;
     delete this.selectedVerts;
     delete this.originalPositions;
+    delete this.model;
+    delete this.scene;
+    delete this.frame;
+    delete this.canvas;
+    delete this.mv;
+    delete this.ndcFromCanvasCoords;
   }
 
   onMouseDown(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+    // hacky indictor for "is this event from a OrthoWireProjection component".
+    // TODO: make clearer, maybe collect all these in something explicitly named for that component
+    if (!evt.canvas) return;
+
+    const [x, y] = [evt.offsetX, evt.offsetY];
     const { model, scene } = evt;
     const frame = floor(evt.frame);
     const originalPositions = scene.selectedVerts.map(i => {
@@ -29,26 +39,30 @@ export default class RotateTool {
       angle: 0,
       // probably need axis in world space too
       selectedVerts: scene.selectedVerts,
-      originalPositions: originalPositions
+      originalPositions: originalPositions,
+      model,
+      scene,
+      frame: Math.floor(evt.frame),
+      canvas: evt.canvas,
+      mv: evt.mv,
+      ndcFromCanvasCoords: evt.ndcFromCanvasCoords
     });
   }
 
   onMouseMove(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-    const { canvas, model, mv, ndcFromCanvasCoords } = evt;
-    const frame = floor(evt.frame);
-    const [w, h] = [canvas.width, canvas.height];
-
     if (this.state == 'rotating') {
-      const fromScr = this.movingFrom.slice(); // copy
+      const { canvas, model, mv, ndcFromCanvasCoords, frame, movingFrom, selectedVerts, originalPositions } = this;
+      const canvasBounds = canvas.getBoundingClientRect();
+      const [x, y] = [evt.clientX - canvasBounds.x, evt.clientY - canvasBounds.y];
+      const [w, h] = [canvas.width, canvas.height];
+
+      const fromScr = movingFrom;
       const fromNDC = ndcFromCanvasCoords(fromScr, w, h);
       const toScr = [x, y];
       const toNDC = ndcFromCanvasCoords(toScr, w, h);
-      const selectedVerts = this.selectedVerts;
 
       const angle = atan2(toNDC[1], toNDC[0])
         - atan2(fromNDC[1], fromNDC[0]);
-      const originalPositions = this.originalPositions;
 
       const rotateSelectedVerts = function () {
         selectedVerts.forEach((vertIndex, i) => {
@@ -65,9 +79,7 @@ export default class RotateTool {
         });
       };
 
-      // moveSelectedVerts(canvas, selectedVerts, model, frame, projectionMatrix, camSpaceMatrix, fromScr, toScr);
       rotateSelectedVerts();
-      // this.movingFrom = [x, y];
     }
   }
 

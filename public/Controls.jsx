@@ -24,7 +24,7 @@ export default function Controls({
   const toolButtons = TOOL_NAMES.map((t) =>
     <button type='button'
       key={t}
-      disabled={t == tool.name}
+      disabled={t == tool?.name}
       onClick={() => onToolSelected(t)}
     >
       {t}

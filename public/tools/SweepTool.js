@@ -3,39 +3,52 @@ export default class SweepTool {
     this.name = 'sweep';
   }
 
-
   reset() {
     delete this.state;
     delete this.movingFrom;
     delete this.sweepBoxVerts;
     delete this.componentRef;
+    delete this.getVertsIn;
+    delete this.ndcFromCanvasCoords;
+    delete this.canvas;
+    delete this.scene;
+    delete this.camSpaceMatrix;
+    delete this.buildProjectionMatrix;
+    delete this.zoom;
   }
 
   onMouseDown(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+    // hacky indictor for "is this event from a OrthoWireProjection component".
+    // TODO: make clearer, maybe collect all these in something explicitly named for that component
+    if (!evt.canvas) return;
+
     Object.assign(this, {
       state: 'sweeping',
-      movingFrom: [x, y],
+      movingFrom: [evt.offsetX, evt.offsetY],
       sweepBoxVerts: null,
-      componentRef: evt.componentRef
+      componentRef: evt.componentRef,
+      // TODO: move these functions up, and instead pass only data
+      // actually what we should probably do is take just a handle to the "active" ortho pane, and call methods of it when we need them, e.g. later on mouse moves, to get stuff like projection matrix and zoom.
+      getVertsIn: evt.getVertsIn,
+      ndcFromCanvasCoords: evt.ndcFromCanvasCoords,
+      canvas: evt.canvas,
+      scene: evt.scene,
+      camSpaceMatrix: evt.camSpaceMatrix,
+      buildProjectionMatrix: evt.buildProjectionMatrix,
+      zoom: evt.zoom
     });
   }
 
   onMouseMove(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-    const {canvas} = evt;
-    const [w, h] = [canvas.width, canvas.height];
-
     if (this.state == 'sweeping') {
-      const movingFrom = this.movingFrom;
-      const {
-        camSpaceMatrix,
-        projectionMatrix,
-        scene,
-        // TODO: move these functions up, and instead pass only data
-        getVertsIn,
-        ndcFromCanvasCoords
-      } = evt;
+      const {canvas, getVertsIn, ndcFromCanvasCoords, movingFrom, camSpaceMatrix, buildProjectionMatrix, zoom, scene} = this;
+      const canvasBounds = canvas.getBoundingClientRect();
+      const [x, y] = [
+        evt.clientX - canvasBounds.x,
+        evt.clientY - canvasBounds.y
+      ];
+      const [w, h] = [canvas.width, canvas.height];
+      const projectionMatrix = buildProjectionMatrix(w, h, zoom);
       const selectedVerts = getVertsIn(movingFrom[0], movingFrom[1], x, y,
         w, h, camSpaceMatrix, projectionMatrix, scene);
 

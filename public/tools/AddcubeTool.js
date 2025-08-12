@@ -38,10 +38,20 @@ export default class AddcubeTool {
     delete this.geomVerts;
     delete this.geomPos;
     delete this.modelVertIndeces;
+    delete this.canvas;
+    delete this.model;
+    delete this.computeBasisMat3ForNewGeometry;
+    delete this.zoom;
+    delete this.camSpaceMatrix;
+    delete this.scene;
   }
 
   onMouseDown(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+    // hacky indictor for "is this event from a OrthoWireProjection component".
+    // TODO: make clearer, maybe collect all these in something explicitly named for that component
+    if (!evt.canvas) return;
+
+    const [x, y] = [evt.offsetX, evt.offsetY];
     const { canvas, model, worldPosFromCanvasPos, zoom, camSpaceMatrix } = evt;
     const { verts, tris } = UNIT_CUBE;
     const newVertIndeces = verts.map(v => model.addVert(v));
@@ -58,19 +68,24 @@ export default class AddcubeTool {
       canvasStartPos: [x, y],
       geomVerts: verts, // geometry prototype, e.g. unit cube with origin (0,0,0)
       geomPos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
-      modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i)
+      modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i),
+      canvas: evt.canvas,
+      model: evt.model,
+      computeBasisMat3ForNewGeometry: evt.computeBasisMat3ForNewGeometry,
+      zoom: evt.zoom,
+      camSpaceMatrix: evt.camSpaceMatrix,
+      scene: evt.scene
     });
   }
 
   onMouseMove(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
-    const {
-      canvas, model, computeBasisMat3ForNewGeometry, zoom, camSpaceMatrix
-    } = evt;
-
     if (this.state == 'scaling') {
-      const { modelVertIndeces, geomVerts, geomPos, canvasStartPos } = this;
-
+      const {
+        modelVertIndeces, geomVerts, geomPos, canvasStartPos,
+        canvas, model, computeBasisMat3ForNewGeometry, zoom, camSpaceMatrix
+      } = this;
+      const canvasBounds = canvas.getBoundingClientRect();
+      const [x, y] = [evt.clientX - canvasBounds.x, evt.clientY - canvasBounds.y];
       const basis = computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camSpaceMatrix);
 
       const newGeomVertCoords = modelVertIndeces.map((vertIndex, i) => {
@@ -98,10 +113,12 @@ export default class AddcubeTool {
   }
 
   onMouseUp(evt) {
-    const { scene } = evt;
-    // scene.selectedVerts = this.modelVertIndeces;
-    // 1. WHY DOES THE ABOVE MEAN THAT SUBSEQUENT DRAWS REFLECT THE OLD SELECTION FOREVER?
-    scene.selectedVerts.splice(0, scene.selectedVerts.length, ...this.modelVertIndeces)
-    this.reset();
+    if (this.state == 'scaling') {
+      const { scene } = this;
+      // scene.selectedVerts = this.modelVertIndeces;
+      // 1. WHY DOES THE ABOVE MEAN THAT SUBSEQUENT DRAWS REFLECT THE OLD SELECTION FOREVER?
+      scene.selectedVerts.splice(0, scene.selectedVerts.length, ...this.modelVertIndeces)
+      this.reset();
+    }
   }
 }

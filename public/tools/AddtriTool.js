@@ -9,6 +9,10 @@ export default class AddtriTool {
   }
 
   onMouseDown(evt) {
+    // hacky indictor for "is this event from a OrthoWireProjection component".
+    // TODO: make clearer, maybe collect all these in something explicitly named for that component
+    if (!evt.canvas) return;
+
     const newtri = this.newtri;
     const { scene } = evt;
 
@@ -33,7 +37,11 @@ export default class AddtriTool {
   }
 
   onMouseMove(evt) {
-    const [x, y] = [evt.nativeEvent.offsetX, evt.nativeEvent.offsetY];
+    // hacky indictor for "is this event from a OrthoWireProjection component".
+    // TODO: make clearer, maybe collect all these in something explicitly named for that component
+    if (!evt.canvas) return;
+
+    const [x, y] = [evt.offsetX, evt.offsetY];
     const {
       buildProjectionMatrix, getClosestVert, camSpaceMatrix, canvas, scene, zoom
     } = evt;
