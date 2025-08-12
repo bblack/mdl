@@ -275,15 +275,11 @@ function worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix) {
   return ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
 }
 
-function ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix){
-    var invProjMat = mat4.create();
-    mat4.invert(invProjMat, projectionMatrix);
-    var vCam = vec4.create();
-    vec4.transformMat4(vCam, vNDC, invProjMat);
-    var invCamSpaceMat = mat4.create();
-    mat4.invert(invCamSpaceMat, camSpaceMatrix);
-    var vWorld = vec4.create();
-    vec4.transformMat4(vWorld, vCam, invCamSpaceMat);
+function ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix) {
+    var invProjMat = mat4.invert(mat4.create(), projectionMatrix);
+    var vCam = vec4.transformMat4(vec4.create(), vNDC, invProjMat);
+    var invCamSpaceMat = mat4.invert(mat4.create(), camSpaceMatrix);
+    var vWorld = vec4.transformMat4(vec4.create(), vCam, invCamSpaceMat);
     return vWorld;
 }
 
