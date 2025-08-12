@@ -1,35 +1,26 @@
 import { vec3 } from '../components/gl-matrix/lib/gl-matrix.js';
+const { sqrt } = Math;
 
 const UNIT_MESH = {
   verts: [
-    [0, 0, 0],
-    [0, 1, 0],
-    [1, 1, 0],
     [1, 0, 0],
-    [0, 0, 1],
-    [0, 1, 1],
-    [1, 1, 1],
-    [1, 0, 1],
+    [0.5, 0.5*sqrt(3), 0],
+    [-0.5, 0.5*sqrt(3), 0],
+    [-1, 0, 0],
+    [-0.5, -0.5*sqrt(3), 0],
+    [0.5, -0.5*sqrt(3), 0],
   ],
   tris: [
-    [2, 1, 0],
-    [0, 3, 2],
-    [5, 6, 7],
-    [7, 4, 5],
-    [1, 5, 4],
-    [4, 0, 1],
-    [6, 2, 3],
-    [3, 7, 6],
-    [3, 0, 4],
-    [4, 7, 3],
-    [6, 5, 1],
-    [1, 2, 6]
+    [0, 1, 5],
+    [1, 4, 5],
+    [2, 4, 1],
+    [2, 3, 4]
   ]
 }
 
-export default class AddcubeTool {
+export default class AdddiscTool {
   constructor() {
-    this.name = 'addcube';
+    this.name = 'adddisc';
   }
 
   reset() {
@@ -59,7 +50,7 @@ export default class AddcubeTool {
     Object.assign(this, {
       state: 'scaling',
       canvasStartPos: [x, y],
-      geomVerts: verts, // geometry prototype, e.g. unit cube with origin (0,0,0)
+      geomVerts: verts, // geometry prototype, e.g. unit disc with origin (0,0,0)
       geomPos: worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix),
       modelVertIndeces: verts.map((_, i) => model.vertexCount() - verts.length + i),
       orthoWireProjection: evt.orthoWireProjection

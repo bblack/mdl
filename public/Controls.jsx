@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Skin from './Skin.jsx';
 
-const TOOL_NAMES = ['single', 'sweep', 'move', 'rotate', 'addvert', 'addtri', 'addcube'];
+const TOOL_NAMES = ['single', 'sweep', 'move', 'rotate', 'addvert', 'addtri', 'addcube', 'adddisc'];
 
 export default function Controls({
   scene,

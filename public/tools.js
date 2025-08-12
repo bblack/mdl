@@ -1,4 +1,5 @@
 import AddcubeTool from './tools/AddcubeTool.js';
+import AdddiscTool from './tools/AdddiscTool.js';
 import AddtriTool from './tools/AddtriTool.js';
 import AddvertTool from './tools/AddvertTool.js';
 import MoveTool from './tools/MoveTool.js';
@@ -8,6 +9,7 @@ import SingleTool from './tools/Single.js';
 
 export default {
   addcube: AddcubeTool,
+  adddisc: AdddiscTool,
   addtri: AddtriTool,
   addvert: AddvertTool,
   move: MoveTool,
