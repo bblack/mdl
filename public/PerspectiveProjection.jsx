@@ -158,7 +158,7 @@ export default function PerspectiveProjection({mv, scene, activeSkin}) {
   const canvasRef = useRef(null);
   const pitchRef = useRef(0);
   const yawRef = useRef(0);
-  const lastScreenPosRef = useRef(null);
+  const lastDragPosRef = useRef(null);
 
   // - must useEffect here, since we depend on canvasRef.current, which is not available until after render.
   // - do NOT want to kick off new render loop on re-render though, if canvas is from prior render, since we already have a render loop going.
@@ -281,33 +281,52 @@ export default function PerspectiveProjection({mv, scene, activeSkin}) {
     mv
   ]);
 
+  useEffect(() => {
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp);
+      document.addEventListener('mousemove', onMouseMove);
+    }
+  });
+
   if (scene.entities.length == 0) return null;
 
-  function onMouseMove(evt) {
-    // evt is react's SyntheticBaseEvent. we might use movementX/Y from that instead of computing our own but for now...
+  function onMouseDown(evt) {
     evt = evt.nativeEvent;
 
-    if (evt.buttons & 1) {
-      const curScreenPos = [evt.offsetX, evt.offsetY];
-      const lastScreenPos = lastScreenPosRef.current || curScreenPos;
+    const [x, y] = [evt.clientX, evt.clientY];
+
+    lastDragPosRef.current = [x, y];
+  }
+
+  function onMouseMove(evt) {
+    if (lastDragPosRef.current) {
+      const curScreenPos = [evt.clientX, evt.clientY];
+      const lastDragPos = lastDragPosRef.current;
       var pitch = pitchRef.current;
       var yaw = yawRef.current;
 
-      pitch += (curScreenPos[1] - lastScreenPos[1]) * 0.02;
+      pitch += (curScreenPos[1] - lastDragPos[1]) * 0.02;
       while (pitch > Math.PI*2) pitch -= Math.PI*2;
       while (pitch < 0) pitch += Math.PI*2;
 
-      yaw += (curScreenPos[0] - lastScreenPos[0]) * 0.02;
+      yaw += (curScreenPos[0] - lastDragPos[0]) * 0.02;
       while (yaw > Math.PI*2) yaw -= Math.PI*2;
       while (yaw < 0) yaw += Math.PI*2;
 
       yawRef.current = yaw;
       pitchRef.current = pitch;
-      lastScreenPosRef.current = curScreenPos;
+      lastDragPosRef.current = curScreenPos;
     }
   }
 
+  function onMouseUp(evt) {
+    lastDragPosRef.current = null;
+  }
+
   return (
-    <canvas ref={canvasRef} onMouseMove={onMouseMove}></canvas>
+    <canvas ref={canvasRef} onMouseDown={onMouseDown}>
+    </canvas>
   );
 }
