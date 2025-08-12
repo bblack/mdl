@@ -269,10 +269,9 @@ function computeBasisMat3ForNewGeometry(x, y, canvasStartPos, canvas, zoom, camS
 
 function worldPosFromCanvasPos(x, y, canvas, zoom, camSpaceMatrix) {
   const [w, h] = [canvas.width, canvas.height];
-  const xNDC = x / canvas.clientWidth * 2 - 1;
-  const yNDC = y / canvas.clientHeight * -2 + 1;
-  const vNDC = vec4.fromValues(xNDC, yNDC, 0, 1);
+  const vNDC = vec4.clone(ndcFromCanvasCoords([x, y], w, h))
   const projectionMatrix = buildProjectionMatrix(w, h, zoom);
+
   return ndcToWorld(vNDC, projectionMatrix, camSpaceMatrix);
 }
 
@@ -302,10 +301,8 @@ function buildProjectionMatrix(w, h, zoom) {
 }
 
 function getClosestVert(x, y, canvas, scene, camSpaceMatrix, projectionMatrix) {
-    var cursorNDC = [
-        x / canvas.clientWidth * 2 - 1,
-        -(y / canvas.clientHeight * 2 - 1)
-    ];
+    var [w, h] = [canvas.clientWidth, canvas.clientHeight];
+    var cursorNDC = ndcFromCanvasCoords([x, y], w, h);
     var closestVertDist = Infinity;
     var closestVertIndex;
     for (var ent of scene.entities) {
