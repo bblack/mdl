@@ -223,11 +223,10 @@ export default function PerspectiveProjection({mv, scene, activeSkin}) {
         var vertices = [];
         for (var ent of scene.entities) {
             var mdl = ent.model;
-            const frame = ent.frame;
-            var frame1 = Math.floor(frame);
-            var frame2 = mdl.frames.length == 1 ? frame1 :
-                (Math.floor(frame) + 1) % (mdl.frames.length - 1);
-            var lerp = frame - Math.floor(frame);
+            const frame1 = ent.frame;
+            // TODO: if this is the last frame of the selected frameset, loop properly: make frame2 the first frame of that frameset.
+            const frame2 = ent.nextFrame;
+            const { lerp } = ent;
             var frame1verts = mdl.frames[frame1].simpleFrame.verts;
             var frame2verts = mdl.frames[frame2].simpleFrame.verts;
             for (var tri of mdl.triangles) {

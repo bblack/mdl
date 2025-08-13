@@ -15,10 +15,12 @@ export default function Controls({
   onOpen,
   onSave,
   onToolSelected,
-  onPickSkin
+  onPickSkin,
+  onChangeFrameset
 }) {
   const ent = !scene.entities.length ? null : scene.entities[0];
   const model = !ent ? null : ent.model;
+  // TODO: we should NOT have our own "frame" state. it causes e.g. the displayed label to be out of date once the "frameset" is switched, since the true authoritative frame is in scene.entities[0].frame, owned by parent.
   const [frame, setFrame] = useState(0);
   const [showSkinModal, setShowSkinModal] = useState(false);
   const toolButtons = TOOL_NAMES.map((t) =>
@@ -56,6 +58,34 @@ export default function Controls({
     onChangeFrame(newFrame);
   }
 
+  function frameSetOptions() {
+    if (!model) return [];
+
+    return model.frames
+      .reduce((acc, f, i) => {
+        const name = f.simpleFrame.name;
+        const match = name.match(/^([^\d])*/);
+        console.assert(match, `no frameset name found in frame "${name}"`);
+        const setname = match[0];
+
+        const currentSet = acc.length == 0 ? null : acc[acc.length - 1];
+
+        if (currentSet && currentSet.name == setname) {
+          currentSet.frames.push(i);
+        } else {
+          const newSet = { name: setname, frames: [i] };
+          acc.push(newSet);
+        }
+
+        return acc;
+      }, [])
+      .map(frameSet => {
+        const name = frameSet.name;
+        const frame = frameSet.frames[0];
+        return <option key={name} value={frame}>{name}</option>
+      });
+  }
+
   return (
     <div id='controls'>
       <div>
@@ -89,16 +119,22 @@ export default function Controls({
       <hr/>
 
       <h3>Animation</h3>
-
-      <input type='range' min='0' max={!model ? 0 : model.frames.length - 1}
-        value={frame} onChange={_onChangeFrame}
-      />
-
-      <button onClick={playing ? onClickStop : onClickPlay}>
-        { playing ? 'stop' : 'play' }
-      </button>
-
-      { !model ? null : model.frames[frame].simpleFrame.name }
+      <div>
+        <select name='frameset' onChange={onChangeFrameset}>
+          {frameSetOptions()}
+        </select>
+      </div>
+      <div>
+        <input type='range' min='0' max={!model ? 0 : model.frames.length - 1}
+          value={frame} onChange={_onChangeFrame}
+        />
+        <button onClick={playing ? onClickStop : onClickPlay}>
+          { playing ? 'stop' : 'play' }
+        </button>
+      </div>
+      <div>
+        { !model ? null : model.frames[frame].simpleFrame.name }
+      </div>
       <hr/>
 
       <h3>Skin</h3>

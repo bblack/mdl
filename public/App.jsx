@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-
 import Controls from './Controls.jsx';
 import QuadView from './QuadView.jsx';
 import Mdl from './Mdl.js';
 import tools from './tools.js';
+const { floor } = Math;
 
 function fetchModel() {
   return fetch('/player.mdl')
@@ -59,16 +59,22 @@ export default function App() {
       .then((values) => {
         const _palette = values[0];
         const _model = values[1];
+        const frame = 0;
         scene.palette = _palette;
         scene.entities = [
-          {model: _model, frame: 0}
+          {
+            model: _model,
+            frame: frame,
+            nextFrame: decideNextFrame(frame, _model),
+            lerp: 0
+          }
         ];
         setScene(Object.assign({}, scene));
       });
     return function cleanup() {
       cancelAnimationFrame(lerpFrameRequest.current);
     }
-  }, [true]); // constant "true" so's we only do this once
+  }, []);
 
   // should this go in an "effect" too? dependent on [playing]?
   if (playing) {
@@ -138,11 +144,20 @@ export default function App() {
     setActiveSkin(i);
   }
 
+  function onChangeFrameset(evt) {
+    const select = evt.target;
+    const frame = parseInt(select.value);
+    const ent = scene.entities[0];
+    ent.frame = frame;
+    ent.nextFrame = decideNextFrame(frame, ent.model);
+    // TODO stop having to set nextFrame everywhere we set frame
+    // seems like we should have some "model" layer, distinct from this "view model" code, allowing outsiders like the view model to make a single call to set the current frameset, and the model internally handles setting nextFrame etc
+  }
+
   function play() {
     console.log('play')
     if (playing) return;
     setPlaying(true);
-    // lerpFrame();
   }
 
   function stop() {
@@ -151,23 +166,41 @@ export default function App() {
   }
 
   function lerpFrame() {
-    console.log('lerpFrame; playing=' + playing);
-
     const now = Date.now();
-    const lerp = !lastTickTime ? 0 : (now - lastTickTime) / 100;
+    const dLerp = !lastTickTime ? 0 : (now - lastTickTime) / 100;
 
     scene.entities.forEach((ent) => {
-      ent.frame = (ent.frame + lerp) % ent.model.frames.length;
-      // console.log("set entity frame to " + ent.frame);
+      ent.lerp += dLerp;
+
+      while (ent.lerp > 1) {
+        ent.frame = ent.nextFrame;
+        ent.nextFrame = decideNextFrame(ent.frame, ent.model);
+        ent.lerp -= 1;
+      }
     });
 
     lastTickTime = now;
     lerpFrameRequest.current = requestAnimationFrame(lerpFrame);
   }
 
-  function cancelLerpFrame() {
-    console.log('cancelLerpFrame; playing=' + playing);
+  function decideNextFrame(frame, model) {
+    let nextFrame = (frame + 1) % model.frames.length;
+    let setname = getSetname(frame, model);
 
+    if (getSetname(nextFrame, model) != setname) {
+      while (nextFrame > 0 && getSetname(nextFrame - 1, model) == setname) {
+        nextFrame -= 1;
+      }
+    }
+
+    return nextFrame;
+  }
+
+  function getSetname(frame, model) {
+    return model.frames[frame].simpleFrame.name.match(/^([^\d])*/)[0];
+  }
+
+  function cancelLerpFrame() {
     scene.entities.forEach((ent) => {
       ent.frame = Math.floor(ent.frame);
     });
@@ -185,6 +218,7 @@ export default function App() {
         onOpen={onOpen} onSave={onSave} onClickPlay={onClickPlay}
         onClickStop={onClickStop} onToolSelected={onToolSelected}
         onChangeFrame={onChangeFrame}
+        onChangeFrameset={onChangeFrameset}
         onPickSkin={onPickSkin}
       />
       <QuadView scene={scene} activeSkin={activeSkin} tool={tool}

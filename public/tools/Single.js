@@ -43,7 +43,6 @@ export default class SingleTool {
         } = evt.orthoWireProjection;
         let [w, h] = [canvas.width, canvas.height];
         let [x, y] = [evt.offsetX, evt.offsetY];
-        console.log(`(${[x, y]})`)
         let projectionMatrix = buildProjectionMatrix(w, h, zoom);
         const closestVertIndex = getClosestVert(
           x, y, canvas, scene, camSpaceMatrix, projectionMatrix
