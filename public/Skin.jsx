@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function Skin({ scene, activeSkin, onClose, onPickSkin }) {
+export default function Skin({ palette, model, activeSkin, onClose, onPickSkin }) {
   const canvasRef = useRef(null);
   const [style, setStyle] = useState({
     position: 'absolute',
@@ -13,9 +13,6 @@ export default function Skin({ scene, activeSkin, onClose, onPickSkin }) {
     boxShadow: '0 2px 8px black',
     padding: '1em'
   });
-
-  const palette = scene.palette;
-  const model = scene.entities[0].model;
   const width = model.skinWidth;
   const height = model.skinHeight;
 

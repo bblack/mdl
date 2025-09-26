@@ -275,6 +275,7 @@ export default function PerspectiveProjection({mv, scene, activeSkin}) {
     // if we have a new canvas, we'd have a new gl context etc:
     // canvasRef.current,
     // a new scene may have a new texture, and since we only load that into GL in the above function:
+    // canvasRef.current,
     scene,
     activeSkin,
     mv

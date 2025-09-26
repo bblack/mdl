@@ -29,6 +29,15 @@ export default function App() {
   var lastTickTime;
   const selectedVerts = [];
   const [tool, setTool] = useState(null);
+  const [frame, _setFrame] = useState(0);
+  const setFrame = function(newFrame) {
+    const ent = scene.entities[0];
+    ent.frame = newFrame;
+    ent.nextFrame = decideNextFrame(newFrame, ent.model);
+    // TODO stop having to set nextFrame everywhere we set frame
+    // seems like we should have some "model" layer, distinct from this "view model" code, allowing outsiders like the view model to make a single call to set the current frameset, and the model internally handles setting nextFrame etc
+    _setFrame(newFrame);
+  }
   const [scene, _setScene] = useState(
     {
       selectedVerts: selectedVerts,
@@ -76,14 +85,18 @@ export default function App() {
     }
   }, []);
 
-  // should this go in an "effect" too? dependent on [playing]?
-  if (playing) {
-    if (!lerpFrameRequest.current) {
-      lerpFrame();
+  useEffect(() => {
+    if (playing) {
+      if (!lerpFrameRequest.current) {
+        lerpFrame();
+      }
+      // const id = setInterval(() => onChangeFrame(frame), 100);
+
+      // return () => clearInterval(id);
+    } else {
+      cancelLerpFrame();
     }
-  } else {
-    cancelLerpFrame();
-  }
+  }, [playing]);
 
   // -- functions --
 
@@ -137,7 +150,7 @@ export default function App() {
   }
 
   function onChangeFrame(newFrame) {
-    scene.entities.forEach((ent) => ent.frame = newFrame)
+    setFrame(newFrame);
   }
 
   function onPickSkin(i) {
@@ -148,10 +161,7 @@ export default function App() {
     const select = evt.target;
     const frame = parseInt(select.value);
     const ent = scene.entities[0];
-    ent.frame = frame;
-    ent.nextFrame = decideNextFrame(frame, ent.model);
-    // TODO stop having to set nextFrame everywhere we set frame
-    // seems like we should have some "model" layer, distinct from this "view model" code, allowing outsiders like the view model to make a single call to set the current frameset, and the model internally handles setting nextFrame etc
+    setFrame(frame);
   }
 
   function play() {
@@ -173,8 +183,7 @@ export default function App() {
       ent.lerp += dLerp;
 
       while (ent.lerp > 1) {
-        ent.frame = ent.nextFrame;
-        ent.nextFrame = decideNextFrame(ent.frame, ent.model);
+        setFrame(ent.nextFrame);
         ent.lerp -= 1;
       }
     });
@@ -201,9 +210,11 @@ export default function App() {
   }
 
   function cancelLerpFrame() {
-    scene.entities.forEach((ent) => {
-      ent.frame = Math.floor(ent.frame);
-    });
+    const ent = scene.entities[0];
+
+    if (ent) {
+      setFrame(Math.floor(ent.frame));
+    }
 
     lastTickTime = null;
     cancelAnimationFrame(lerpFrameRequest.current);
@@ -212,7 +223,8 @@ export default function App() {
 
   return (
     <>
-      <Controls scene={scene}
+      <Controls model={scene.entities[0]?.model}
+        frame={frame}
         activeSkin={activeSkin}
         playing={playing} tool={tool}
         onOpen={onOpen} onSave={onSave} onClickPlay={onClickPlay}
@@ -220,6 +232,7 @@ export default function App() {
         onChangeFrame={onChangeFrame}
         onChangeFrameset={onChangeFrameset}
         onPickSkin={onPickSkin}
+        onChooseFrame={onChangeFrame}
       />
       <QuadView scene={scene} activeSkin={activeSkin} tool={tool}
         onToolSelected={onToolSelected}

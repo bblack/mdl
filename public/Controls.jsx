@@ -5,7 +5,8 @@ import Skin from './Skin.jsx';
 const TOOL_NAMES = ['single', 'sweep', 'move', 'rotate', 'addvert', 'addtri', 'addcube', 'adddisc'];
 
 export default function Controls({
-  scene,
+  model,
+  frame,
   activeSkin,
   playing,
   tool,
@@ -16,12 +17,10 @@ export default function Controls({
   onSave,
   onToolSelected,
   onPickSkin,
-  onChangeFrameset
+  onChangeFrameset,
+  onChooseFrame
 }) {
-  const ent = !scene.entities.length ? null : scene.entities[0];
-  const model = !ent ? null : ent.model;
   // TODO: we should NOT have our own "frame" state. it causes e.g. the displayed label to be out of date once the "frameset" is switched, since the true authoritative frame is in scene.entities[0].frame, owned by parent.
-  const [frame, setFrame] = useState(0);
   const [showSkinModal, setShowSkinModal] = useState(false);
   const toolButtons = TOOL_NAMES.map((t) =>
     <button type='button'
@@ -32,15 +31,6 @@ export default function Controls({
       {t}
     </button>
   );
-  const entity = () => scene.entities[0];
-
-  useEffect(() => {
-    if (!playing) return;
-
-    const id = setInterval(() => setFrame(Math.floor(entity().frame)), 100);
-
-    return () => clearInterval(id);
-  });
 
   function onClickViewSkin() {
     setShowSkinModal(true);
@@ -54,7 +44,7 @@ export default function Controls({
       return;
     }
 
-    setFrame(newFrame);
+    onChooseFrame(newFrame);
     onChangeFrame(newFrame);
   }
 
@@ -148,7 +138,8 @@ export default function Controls({
 
       {showSkinModal &&
         createPortal(
-          <Skin scene={scene}
+          <Skin palette={palette}
+            model={model}
             activeSkin={activeSkin}
             onClose={() => setShowSkinModal(false)}
             onPickSkin={onPickSkin}
